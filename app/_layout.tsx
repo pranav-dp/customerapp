@@ -10,11 +10,19 @@ import 'react-native-reanimated';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { CartProvider } from '../contexts/CartContext';
 import { colors } from '../constants/colors';
+import { registerForPushNotifications } from '../services/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { user, loading } = useAuth();
+  const { user, customer, loading } = useAuth();
+
+  // Register for push notifications when logged in
+  useEffect(() => {
+    if (user && customer?.id) {
+      registerForPushNotifications(customer.id);
+    }
+  }, [user, customer?.id]);
 
   if (loading) {
     return (
@@ -26,18 +34,15 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      {user ? (
-        <>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        </>
-      ) : (
-        <>
-          <Stack.Screen name="welcome" />
-          <Stack.Screen name="login" />
-          <Stack.Screen name="signup" />
-        </>
-      )}
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="welcome" />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="signup" />
+      <Stack.Screen name="friends" />
+      <Stack.Screen name="money-owed" />
+      <Stack.Screen name="edit-profile" />
+      <Stack.Screen name="insights" />
+      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }

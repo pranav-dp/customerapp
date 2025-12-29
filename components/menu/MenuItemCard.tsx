@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.gray100,
   },
   containerDisabled: {
-    opacity: 0.5,
+    opacity: 0.8,
   },
   content: {
     flex: 1,

@@ -7,6 +7,7 @@ import { colors, spacing } from '../constants/colors';
 import { textStyles } from '../constants/typography';
 import { Button, Input, Header } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
+import { checkUsernameAvailable } from '../services/firestore';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function SignupScreen() {
   
   // Step 1: Basic info
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   
@@ -26,14 +28,25 @@ export default function SignupScreen() {
   const [hostel, setHostel] = useState('');
   
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
-  const validateStep1 = () => {
+  const validateStep1 = async () => {
     const newErrors: Record<string, string> = {};
     if (!name.trim()) newErrors.name = 'Name is required';
+    if (!username.trim()) newErrors.username = 'Username is required';
+    else if (!/^[a-z0-9_]{3,20}$/.test(username)) newErrors.username = 'Use 3-20 lowercase letters, numbers, or _';
     if (!email) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Enter a valid email';
     if (!phone) newErrors.phone = 'Phone number is required';
     else if (!/^\d{10}$/.test(phone)) newErrors.phone = 'Enter a valid 10-digit phone number';
+    
+    if (!newErrors.username) {
+      setCheckingUsername(true);
+      const available = await checkUsernameAvailable(username);
+      setCheckingUsername(false);
+      if (!available) newErrors.username = 'Username already taken';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -47,8 +60,8 @@ export default function SignupScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
-    if (validateStep1()) {
+  const handleNext = async () => {
+    if (await validateStep1()) {
       setStep(2);
     }
   };
@@ -59,6 +72,7 @@ export default function SignupScreen() {
     try {
       await signup(email, password, {
         name: name.trim(),
+        username: username.toLowerCase().trim(),
         email,
         phone,
         rollNumber: rollNumber.trim() || undefined,
@@ -123,6 +137,16 @@ export default function SignupScreen() {
                   autoComplete="name"
                   leftIcon="person-outline"
                   error={errors.name}
+                />
+                <Input
+                  label="Username"
+                  placeholder="Choose a unique username"
+                  value={username}
+                  onChangeText={(t) => setUsername(t.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  leftIcon="at"
+                  error={errors.username}
                 />
                 <Input
                   label="Email"

@@ -11,6 +11,8 @@ import { MenuItemCard, CategoryTabs, ClosedBanner, MenuItem } from '../../compon
 import { CartBar } from '../../components/cart';
 import { Skeleton } from '../../components/ui';
 import { useCart } from '../../contexts/CartContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { toggleFavorite } from '../../services/friends';
 
 interface Restaurant {
   id: string;
@@ -25,10 +27,19 @@ export default function RestaurantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { addItem, restaurantId: cartRestaurantId, totalItems } = useCart();
+  const { customer, refreshCustomer } = useAuth();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [filter, setFilter] = useState<'all' | 'veg' | 'nonveg'>('all');
+
+  const isFavorite = customer?.favorites?.includes(id || '') || false;
+
+  const handleToggleFavorite = async () => {
+    if (!customer?.id || !id) return;
+    await toggleFavorite(customer.id, id, isFavorite);
+    refreshCustomer?.();
+  };
 
   useEffect(() => {
     const fetchRestaurant = async () => {
@@ -169,8 +180,8 @@ export default function RestaurantDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.searchButton}>
-          <Ionicons name="search" size={22} color={colors.textPrimary} />
+        <TouchableOpacity onPress={handleToggleFavorite} style={styles.searchButton}>
+          <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={22} color={isFavorite ? colors.error : colors.textPrimary} />
         </TouchableOpacity>
       </View>
 

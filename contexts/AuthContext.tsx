@@ -6,12 +6,15 @@ import { createCustomer, getCustomerByEmail } from '../services/firestore';
 interface CustomerData {
   id: string;
   name: string;
+  username: string;
   email: string;
   phone: string;
   rollNumber?: string;
   hostel?: string;
   room?: string;
-  friends?: Array<{ id: string; name: string; phone?: string }>;
+  friends?: Array<{ odid: string; odname: string; username: string }>;
+  favorites?: string[];
+  owes?: Record<string, number>; // { odid: amount }
 }
 
 interface AuthContextType {
@@ -38,6 +41,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const result = await getCustomerByEmail(user.email);
         if (result.success) {
           setCustomer(result.data as CustomerData);
+        } else {
+          // Customer doc missing - create a basic one
+          const createResult = await createCustomer({
+            email: user.email,
+            name: user.displayName || user.email.split('@')[0],
+            username: user.email.split('@')[0].toLowerCase(),
+            phone: '',
+          });
+          if (createResult.success) {
+            const refetch = await getCustomerByEmail(user.email);
+            if (refetch.success) setCustomer(refetch.data as CustomerData);
+          }
         }
       } else {
         setCustomer(null);

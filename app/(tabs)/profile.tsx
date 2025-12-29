@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,8 @@ import { useRouter } from 'expo-router';
 import { colors, spacing, borderRadius, shadows } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { useAuth } from '../../contexts/AuthContext';
+import { getCustomerOrders } from '../../services/orders';
+import { getMoneyOwedToMe } from '../../services/friends';
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -34,23 +36,53 @@ function MenuItem({ icon, title, subtitle, onPress, showChevron = true, danger =
 }
 
 export default function ProfileScreen() {
-  const { customer, logout } = useAuth();
+  const { customer, user, logout } = useAuth();
   const router = useRouter();
+  const [stats, setStats] = useState({ orders: 0, spent: 0 });
+  const [owedToMe, setOwedToMe] = useState(0);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user) return;
+      const result = await getCustomerOrders(user.uid);
+      if (result.success) {
+        const paidOrders = (result.data as any[]).filter(o => o.paymentStatus === 'paid');
+        const totalSpent = paidOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+        setStats({ orders: paidOrders.length, spent: totalSpent });
+      }
+    };
+    const fetchOwed = async () => {
+      if (!customer?.id) return;
+      const result = await getMoneyOwedToMe(customer.id);
+      if (result.success) setOwedToMe(result.total);
+    };
+    fetchStats();
+    fetchOwed();
+  }, [user, customer?.id]);
+
+  const iOwe = Object.values(customer?.owes || {}).reduce((sum, amt) => sum + amt, 0);
+
+  const handleLogout = async () => {
     Alert.alert(
       'Log out',
       'Are you sure you want to log out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Log out', style: 'destructive', onPress: logout },
+        { 
+          text: 'Log out', 
+          style: 'destructive', 
+          onPress: async () => {
+            await logout();
+            router.replace('/welcome');
+          }
+        },
       ]
     );
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.avatar}>
@@ -71,20 +103,46 @@ export default function ProfileScreen() {
         {/* Quick Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statValue}>{stats.orders}</Text>
             <Text style={styles.statLabel}>Orders</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>₹0</Text>
+            <Text style={styles.statValue}>₹{stats.spent}</Text>
             <Text style={styles.statLabel}>Spent</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statValue}>{customer?.favorites?.length || 0}</Text>
             <Text style={styles.statLabel}>Favorites</Text>
           </View>
         </View>
+
+        {/* Money Summary */}
+        {(owedToMe > 0 || iOwe > 0) && (
+          <View style={styles.moneyContainer}>
+            {owedToMe > 0 && (
+              <TouchableOpacity style={styles.moneyCard} onPress={() => router.push('/money-owed?tab=toMe')}>
+                <Ionicons name="arrow-down-circle" size={24} color={colors.success} />
+                <View style={styles.moneyInfo}>
+                  <Text style={styles.moneyLabel}>Friends owe you</Text>
+                  <Text style={[styles.moneyAmount, { color: colors.success }]}>₹{owedToMe}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+              </TouchableOpacity>
+            )}
+            {iOwe > 0 && (
+              <TouchableOpacity style={styles.moneyCard} onPress={() => router.push('/money-owed')}>
+                <Ionicons name="arrow-up-circle" size={24} color={colors.warning} />
+                <View style={styles.moneyInfo}>
+                  <Text style={styles.moneyLabel}>You owe friends</Text>
+                  <Text style={[styles.moneyAmount, { color: colors.warning }]}>₹{iOwe}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Menu Sections */}
         <View style={styles.menuSection}>
@@ -93,18 +151,13 @@ export default function ProfileScreen() {
             <MenuItem
               icon="person-outline"
               title="Edit Profile"
-              onPress={() => {}}
+              onPress={() => router.push('/edit-profile')}
             />
             <MenuItem
-              icon="location-outline"
-              title="Saved Addresses"
-              subtitle={customer?.hostel || 'Add your hostel'}
-              onPress={() => {}}
-            />
-            <MenuItem
-              icon="card-outline"
-              title="Payment Methods"
-              onPress={() => {}}
+              icon="analytics-outline"
+              title="Spending Insights"
+              subtitle="Track your food spending"
+              onPress={() => router.push('/insights')}
             />
             <MenuItem
               icon="people-outline"
@@ -176,6 +229,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
   },
+  scrollContent: {
+    paddingBottom: 100,
+  },
   header: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
@@ -240,6 +296,29 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     backgroundColor: colors.gray200,
+  },
+  moneyContainer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  moneyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    padding: spacing.lg,
+    borderRadius: borderRadius.xl,
+  },
+  moneyInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  moneyLabel: {
+    ...textStyles.caption,
+    color: colors.textSecondary,
+  },
+  moneyAmount: {
+    ...textStyles.h3,
   },
   menuSection: {
     marginTop: spacing.xl,

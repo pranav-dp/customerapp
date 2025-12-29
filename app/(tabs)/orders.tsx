@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, spacing, borderRadius } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
 import { getCustomerOrders, Order } from '../../services/orders';
 import { formatPrice } from '../../utils/restaurant';
 import { Skeleton } from '../../components/ui';
@@ -19,11 +20,12 @@ const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string
   cancelled: { color: colors.error, icon: 'close-circle-outline', label: 'Cancelled' },
 };
 
-const OrderCard = ({ order }: { order: Order }) => {
+const OrderCard = ({ order, onReorder }: { order: Order; onReorder: () => void }) => {
   const router = useRouter();
   const status = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
   const date = order.createdAt instanceof Date ? order.createdAt : 
     (order.createdAt as any)?.toDate?.() || new Date();
+  const canReorder = order.status === 'completed';
   
   return (
     <TouchableOpacity 
@@ -52,7 +54,15 @@ const OrderCard = ({ order }: { order: Order }) => {
         <Text style={styles.orderDate}>
           {date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
         </Text>
-        <Text style={styles.orderTotal}>{formatPrice(order.totalAmount)}</Text>
+        <View style={styles.footerRight}>
+          {canReorder && (
+            <TouchableOpacity style={styles.reorderBtn} onPress={onReorder}>
+              <Ionicons name="refresh" size={14} color={colors.primary} />
+              <Text style={styles.reorderText}>Reorder</Text>
+            </TouchableOpacity>
+          )}
+          <Text style={styles.orderTotal}>{formatPrice(order.totalAmount)}</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -60,23 +70,20 @@ const OrderCard = ({ order }: { order: Order }) => {
 
 export default function OrdersScreen() {
   const { user } = useAuth();
+  const { addItem, clearCart } = useCart();
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchOrders = async () => {
     if (!user) {
-      console.log('Orders: No user logged in');
       setLoading(false);
       return;
     }
-    console.log('Orders: Fetching for user', user.uid);
     const result = await getCustomerOrders(user.uid);
-    console.log('Orders: Result', result.success, result.error, result.data?.length);
     if (result.success) {
       setOrders(result.data as Order[]);
-    } else {
-      console.error('Orders: Fetch failed', result.error);
     }
     setLoading(false);
     setRefreshing(false);
@@ -89,6 +96,35 @@ export default function OrdersScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchOrders();
+  };
+
+  const handleReorder = (order: Order) => {
+    Alert.alert(
+      'Reorder',
+      `Add ${order.items.length} items from ${order.restaurantName} to cart?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Add to Cart',
+          onPress: () => {
+            clearCart();
+            order.items.forEach(item => {
+              for (let i = 0; i < item.quantity; i++) {
+                addItem({
+                  id: item.id,
+                  name: item.name,
+                  price: item.price,
+                  isVeg: item.isVeg,
+                  restaurantId: order.restaurantId,
+                  restaurantName: order.restaurantName,
+                });
+              }
+            });
+            router.push('/cart');
+          },
+        },
+      ]
+    );
   };
 
   const activeOrders = orders.filter(o => ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status));
@@ -126,7 +162,7 @@ export default function OrdersScreen() {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Active Orders</Text>
                 {activeOrders.map(order => (
-                  <OrderCard key={order.id} order={order} />
+                  <OrderCard key={order.id} order={order} onReorder={() => handleReorder(order)} />
                 ))}
               </View>
             )}
@@ -135,7 +171,7 @@ export default function OrdersScreen() {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Past Orders</Text>
                 {pastOrders.map(order => (
-                  <OrderCard key={order.id} order={order} />
+                  <OrderCard key={order.id} order={order} onReorder={() => handleReorder(order)} />
                 ))}
               </View>
             )}
@@ -166,6 +202,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     padding: spacing.lg,
+    paddingBottom: 100,
   },
   section: {
     marginBottom: spacing.xl,
@@ -232,6 +269,25 @@ const styles = StyleSheet.create({
   orderDate: {
     ...textStyles.caption,
     color: colors.textTertiary,
+  },
+  footerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  reorderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    backgroundColor: colors.primary + '15',
+    borderRadius: borderRadius.sm,
+  },
+  reorderText: {
+    ...textStyles.caption,
+    color: colors.primary,
+    fontWeight: '600',
   },
   orderTotal: {
     ...textStyles.label,

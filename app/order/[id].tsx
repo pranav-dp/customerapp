@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { colors, spacing, borderRadius } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { subscribeToOrder, Order } from '../../services/orders';
 import { formatPrice } from '../../utils/restaurant';
+import { sendLocalNotification } from '../../services/notifications';
 
 const STEPS = ['pending', 'confirmed', 'preparing', 'ready', 'completed'];
 const STEP_LABELS = ['Order Placed', 'Confirmed', 'Preparing', 'Ready for Pickup', 'Completed'];
@@ -16,11 +17,20 @@ export default function OrderDetailScreen() {
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const prevStatusRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     
     const unsubscribe = subscribeToOrder(id, (orderData) => {
+      // Check if status changed to 'ready'
+      if (orderData && prevStatusRef.current && prevStatusRef.current !== 'ready' && orderData.status === 'ready') {
+        sendLocalNotification(
+          '🍔 Your order is ready!',
+          `Order #${orderData.orderNumber} is ready for pickup at ${orderData.restaurantName}`
+        );
+      }
+      prevStatusRef.current = orderData?.status || null;
       setOrder(orderData);
       setLoading(false);
     });

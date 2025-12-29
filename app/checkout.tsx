@@ -9,6 +9,7 @@ import { useCart, ItemAssignment } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatPrice } from '../utils/restaurant';
 import { createOrder, updateOrderPayment, markOrderPaymentFailed } from '../services/orders';
+import { updateOwedAmount } from '../services/friends';
 import RazorpayService from '../services/razorpay';
 import { Button } from '../components/ui';
 
@@ -56,24 +57,36 @@ export default function CheckoutScreen() {
     let createdOrderNumber: string | null = null;
 
     try {
-      const orderResult = await createOrder({
+      const orderItems = items.map(item => {
+        const base: any = {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          isVeg: item.isVeg ?? true,
+        };
+        if (item.assignments && item.assignments.length > 0) {
+          base.assignments = item.assignments;
+        }
+        return base;
+      });
+
+      const orderData: any = {
         customerId: user.uid,
         customerName: customer.name,
         customerEmail: customer.email,
         customerPhone: customer.phone || '',
         restaurantId,
         restaurantName,
-        items: items.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          isVeg: item.isVeg ?? true,
-          assignments: item.assignments,
-        })),
+        items: orderItems,
         totalAmount,
-        splitSummary: splitEnabled ? getSplitSummary(customer.name) : undefined,
-      });
+      };
+
+      if (splitEnabled) {
+        orderData.splitSummary = getSplitSummary(customer.name);
+      }
+
+      const orderResult = await createOrder(orderData);
 
       if (!orderResult.success || !orderResult.id) {
         throw new Error(orderResult.error || 'Failed to create order');
@@ -96,6 +109,24 @@ export default function CheckoutScreen() {
         paymentResponse.razorpay_order_id
       );
       console.log('Payment update result:', updateResult);
+
+      // Update money owed for friends if split enabled
+      if (splitEnabled && customer.id) {
+        const split = getSplitSummary(customer.name);
+        // Get friend IDs from assignments
+        const friendOwes: Record<string, number> = {};
+        items.forEach(item => {
+          item.assignments?.forEach(a => {
+            if (a.friendId !== 'me') {
+              friendOwes[a.friendId] = (friendOwes[a.friendId] || 0) + (item.price * a.quantity);
+            }
+          });
+        });
+        // Update each friend's owed amount
+        for (const [friendId, amount] of Object.entries(friendOwes)) {
+          await updateOwedAmount(friendId, customer.id, customer.name, amount);
+        }
+      }
 
       setOrderPlaced(true);
       router.replace(`/order/${createdOrderId}`);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,12 +58,19 @@ function RestaurantSkeleton() {
   );
 }
 
+interface SearchResult {
+  item: any;
+  restaurant: Restaurant;
+}
+
 export default function HomeScreen() {
   const { customer } = useAuth();
   const router = useRouter();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
 
   const firstName = customer?.name?.split(' ')[0] || 'there';
 
@@ -85,10 +92,34 @@ export default function HomeScreen() {
     fetchData();
   }, []);
 
+  // Search through all menu items
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const query = searchQuery.toLowerCase();
+    const results: SearchResult[] = [];
+    
+    restaurants.forEach(restaurant => {
+      const status = getRestaurantStatus(restaurant.operatingHours);
+      if (!status.isOpen) return; // Only search open restaurants
+      
+      restaurant.menu?.forEach(item => {
+        if (item.isAvailable && item.name.toLowerCase().includes(query)) {
+          results.push({ item, restaurant });
+        }
+      });
+    });
+    
+    setSearchResults(results.slice(0, 20)); // Limit results
+  }, [searchQuery, restaurants]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         {/* Header */}
@@ -103,12 +134,49 @@ export default function HomeScreen() {
         </View>
 
         {/* Search Bar */}
-        <TouchableOpacity style={styles.searchBar}>
+        <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color={colors.gray500} />
-          <Text style={styles.searchPlaceholder}>Search for dishes or restaurants</Text>
-        </TouchableOpacity>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for dishes..."
+            placeholderTextColor={colors.gray500}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={20} color={colors.gray400} />
+            </TouchableOpacity>
+          )}
+        </View>
 
-        {/* Quick Actions */}
+        {/* Search Results */}
+        {searchQuery.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {searchResults.length > 0 ? `Found ${searchResults.length} items` : 'No items found'}
+            </Text>
+            {searchResults.map((result, index) => (
+              <TouchableOpacity
+                key={`${result.restaurant.id}-${result.item.id}-${index}`}
+                style={styles.searchResultCard}
+                onPress={() => router.push(`/restaurant/${result.restaurant.id}`)}
+              >
+                <View style={styles.searchResultLeft}>
+                  <View style={[styles.vegIndicator, result.item.isVeg ? styles.vegVeg : styles.vegNonVeg]}>
+                    <View style={[styles.vegDot, result.item.isVeg ? styles.dotVeg : styles.dotNonVeg]} />
+                  </View>
+                  <View style={styles.searchResultInfo}>
+                    <Text style={styles.searchResultName}>{result.item.name}</Text>
+                    <Text style={styles.searchResultRestaurant}>{result.restaurant.name}</Text>
+                  </View>
+                </View>
+                <Text style={styles.searchResultPrice}>₹{result.item.price}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <>
         <View style={styles.quickActions}>
           <TouchableOpacity style={styles.quickActionItem}>
             <View style={[styles.quickActionIcon, { backgroundColor: colors.primaryLight }]}>
@@ -174,6 +242,8 @@ export default function HomeScreen() {
             <Text style={styles.infoBannerText}>Order ahead and pick up when ready</Text>
           </View>
         </View>
+        </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -183,6 +253,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
@@ -219,10 +292,57 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
   },
-  searchPlaceholder: {
+  searchInput: {
+    flex: 1,
     ...textStyles.body,
-    color: colors.textTertiary,
+    color: colors.textPrimary,
     marginLeft: spacing.md,
+    paddingVertical: 0,
+  },
+  searchResultCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.gray100,
+  },
+  searchResultLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  vegIndicator: {
+    width: 16,
+    height: 16,
+    borderWidth: 1.5,
+    borderRadius: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vegVeg: { borderColor: colors.veg },
+  vegNonVeg: { borderColor: colors.nonVeg },
+  vegDot: { width: 8, height: 8, borderRadius: 4 },
+  dotVeg: { backgroundColor: colors.veg },
+  dotNonVeg: { backgroundColor: colors.nonVeg },
+  searchResultInfo: {
+    marginLeft: spacing.md,
+    flex: 1,
+  },
+  searchResultName: {
+    ...textStyles.label,
+    color: colors.textPrimary,
+  },
+  searchResultRestaurant: {
+    ...textStyles.caption,
+    color: colors.textSecondary,
+  },
+  searchResultPrice: {
+    ...textStyles.label,
+    color: colors.success,
   },
   quickActions: {
     flexDirection: 'row',

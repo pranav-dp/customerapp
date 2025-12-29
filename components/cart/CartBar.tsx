@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xl + 10,
   },
   bar: {
     flexDirection: 'row',

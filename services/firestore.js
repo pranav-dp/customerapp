@@ -6,7 +6,9 @@ import {
   getDoc,
   getDocs,
   query, 
-  where 
+  where,
+  orderBy,
+  limit
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -15,10 +17,54 @@ export const createCustomer = async (customerData) => {
   try {
     const docRef = await addDoc(collection(db, 'customers'), {
       ...customerData,
+      friends: [],
+      owes: {},
       createdAt: new Date(),
       updatedAt: new Date()
     });
     return { success: true, id: docRef.id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const checkUsernameAvailable = async (username) => {
+  try {
+    const q = query(collection(db, 'customers'), where('username', '==', username.toLowerCase()));
+    const snapshot = await getDocs(q);
+    return snapshot.empty;
+  } catch (error) {
+    return false;
+  }
+};
+
+export const searchUsersByUsername = async (searchQuery) => {
+  try {
+    if (!searchQuery || searchQuery.length < 2) return { success: true, data: [] };
+    
+    const q = query(
+      collection(db, 'customers'),
+      where('username', '>=', searchQuery.toLowerCase()),
+      where('username', '<=', searchQuery.toLowerCase() + '\uf8ff'),
+      limit(10)
+    );
+    const snapshot = await getDocs(q);
+    const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return { success: true, data: users };
+  } catch (error) {
+    return { success: false, error: error.message, data: [] };
+  }
+};
+
+export const getUserByUsername = async (username) => {
+  try {
+    const q = query(collection(db, 'customers'), where('username', '==', username.toLowerCase()));
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      const doc = snapshot.docs[0];
+      return { success: true, data: { id: doc.id, ...doc.data() } };
+    }
+    return { success: false, error: 'User not found' };
   } catch (error) {
     return { success: false, error: error.message };
   }
