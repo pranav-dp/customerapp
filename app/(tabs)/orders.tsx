@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import { colors, spacing, borderRadius } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,7 +18,7 @@ const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string
   pending: { color: colors.warning, icon: 'time-outline', label: 'Pending' },
   confirmed: { color: colors.info, icon: 'checkmark-circle-outline', label: 'Confirmed' },
   preparing: { color: colors.primary, icon: 'flame-outline', label: 'Preparing' },
-  ready: { color: colors.success, icon: 'checkmark-done-outline', label: 'Ready!' },
+  ready: { color: colors.success, icon: 'checkmark-done-outline', label: 'Ready for Pickup!' },
   completed: { color: colors.textSecondary, icon: 'checkmark-done', label: 'Completed' },
   cancelled: { color: colors.error, icon: 'close-circle-outline', label: 'Cancelled' },
 };
@@ -23,14 +26,20 @@ const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string
 const OrderCard = ({ order, onReorder }: { order: Order; onReorder: () => void }) => {
   const router = useRouter();
   const status = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+  const isReady = order.status === 'ready';
   const date = order.createdAt instanceof Date ? order.createdAt : 
     (order.createdAt as any)?.toDate?.() || new Date();
   const canReorder = order.status === 'completed';
   
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(`/order/${order.id}` as any);
+  };
+  
   return (
     <TouchableOpacity 
-      style={styles.orderCard}
-      onPress={() => router.push(`/order/${order.id}` as any)}
+      style={[styles.orderCard, isReady && styles.orderCardReady]}
+      onPress={handlePress}
       activeOpacity={0.7}
     >
       <View style={styles.orderHeader}>
@@ -72,33 +81,73 @@ export default function OrdersScreen() {
   const { user } = useAuth();
   const { addItem, clearCart } = useCart();
   const router = useRouter();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [activeOrders, setActiveOrders] = useState<Order[]>([]);
+  const [pastOrders, setPastOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const prevStatusRef = useRef<Record<string, string>>({});
 
-  const fetchOrders = async () => {
+  // Real-time listener for active orders only (minimizes reads)
+  useEffect(() => {
     if (!user) {
       setLoading(false);
       return;
     }
+
+    const q = query(
+      collection(db, 'orders'),
+      where('customerId', '==', user.uid),
+      where('status', 'in', ['pending', 'confirmed', 'preparing', 'ready']),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Order[];
+      
+      // Check for status changes to trigger haptic
+      orders.forEach(order => {
+        const prevStatus = prevStatusRef.current[order.id!];
+        if (prevStatus && prevStatus !== order.status) {
+          if (order.status === 'ready') {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } else if (order.status === 'preparing') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }
+        }
+        prevStatusRef.current[order.id!] = order.status;
+      });
+      
+      setActiveOrders(orders);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Fetch past orders only on mount and refresh (not real-time)
+  const fetchPastOrders = async () => {
+    if (!user) return;
     const result = await getCustomerOrders(user.uid);
     if (result.success) {
-      setOrders(result.data as Order[]);
+      const past = (result.data as Order[]).filter(o => 
+        ['completed', 'cancelled'].includes(o.status)
+      );
+      setPastOrders(past);
     }
-    setLoading(false);
-    setRefreshing(false);
   };
 
   useEffect(() => {
-    fetchOrders();
+    fetchPastOrders();
   }, [user]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    fetchOrders();
+    await fetchPastOrders();
+    setRefreshing(false);
   };
 
   const handleReorder = (order: Order) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
       'Reorder',
       `Add ${order.items.length} items from ${order.restaurantName} to cart?`,
@@ -127,9 +176,6 @@ export default function OrdersScreen() {
     );
   };
 
-  const activeOrders = orders.filter(o => ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status));
-  const pastOrders = orders.filter(o => ['completed', 'cancelled'].includes(o.status));
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -146,7 +192,7 @@ export default function OrdersScreen() {
             <Skeleton width="100%" height={120} style={{ marginBottom: spacing.md }} />
             <Skeleton width="100%" height={120} style={{ marginBottom: spacing.md }} />
           </>
-        ) : orders.length === 0 ? (
+        ) : activeOrders.length === 0 && pastOrders.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
               <Ionicons name="receipt-outline" size={64} color={colors.gray300} />
@@ -183,10 +229,7 @@ export default function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
@@ -195,18 +238,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.gray100,
     backgroundColor: colors.white,
   },
-  title: {
-    ...textStyles.h1,
-    color: colors.textPrimary,
-  },
-  content: {
-    flexGrow: 1,
-    padding: spacing.lg,
-    paddingBottom: 100,
-  },
-  section: {
-    marginBottom: spacing.xl,
-  },
+  title: { ...textStyles.h1, color: colors.textPrimary },
+  content: { flexGrow: 1, padding: spacing.lg, paddingBottom: 100 },
+  section: { marginBottom: spacing.xl },
   sectionTitle: {
     ...textStyles.label,
     color: colors.textSecondary,
@@ -222,21 +256,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray100,
   },
+  orderCardReady: {
+    backgroundColor: '#E8F5E9',
+    borderColor: colors.success,
+    borderWidth: 2,
+  },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: spacing.sm,
   },
-  orderNumber: {
-    ...textStyles.h4,
-    color: colors.textPrimary,
-  },
-  restaurantName: {
-    ...textStyles.body,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
+  orderNumber: { ...textStyles.h4, color: colors.textPrimary },
+  restaurantName: { ...textStyles.body, color: colors.textSecondary, marginTop: 2 },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -245,19 +277,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     gap: 4,
   },
-  statusText: {
-    ...textStyles.caption,
-    fontWeight: '600',
-  },
-  orderItems: {
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100,
-  },
-  itemsText: {
-    ...textStyles.body,
-    color: colors.textSecondary,
-  },
+  statusText: { ...textStyles.caption, fontWeight: '600' },
+  orderItems: { paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.gray100 },
+  itemsText: { ...textStyles.body, color: colors.textSecondary },
   orderFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -266,15 +288,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.gray100,
   },
-  orderDate: {
-    ...textStyles.caption,
-    color: colors.textTertiary,
-  },
-  footerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
+  orderDate: { ...textStyles.caption, color: colors.textTertiary },
+  footerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   reorderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -284,21 +299,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary + '15',
     borderRadius: borderRadius.sm,
   },
-  reorderText: {
-    ...textStyles.caption,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  orderTotal: {
-    ...textStyles.label,
-    color: colors.textPrimary,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxxl * 2,
-  },
+  reorderText: { ...textStyles.caption, color: colors.primary, fontWeight: '600' },
+  orderTotal: { ...textStyles.label, color: colors.textPrimary },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxxl * 2 },
   emptyIcon: {
     width: 120,
     height: 120,
@@ -308,15 +311,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.xl,
   },
-  emptyTitle: {
-    ...textStyles.h2,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  emptyText: {
-    ...textStyles.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    paddingHorizontal: spacing.xxl,
-  },
+  emptyTitle: { ...textStyles.h2, color: colors.textPrimary, marginBottom: spacing.sm },
+  emptyText: { ...textStyles.body, color: colors.textSecondary, textAlign: 'center', paddingHorizontal: spacing.xxl },
 });

@@ -139,7 +139,7 @@ export default function CheckoutScreen() {
       if (error.message === 'Payment cancelled') {
         Alert.alert('Payment Cancelled', 'Your order was not placed. Please try again.');
       } else {
-        Alert.alert('Payment Failed', error.message || 'Payment could not be completed. Please try again.');
+        router.push(`/payment-failed?reason=${encodeURIComponent(error.message || 'Payment could not be completed')}`);
       }
     } finally {
       setLoading(false);
@@ -222,15 +222,18 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
-        {/* Split Bill Toggle */}
-        {(customer?.friends?.length || 0) > 0 && (
+        {/* Split Bill Toggle - Debug: Always show for testing */}
+        {console.log('DEBUG: customer friends:', customer?.friends, 'length:', customer?.friends?.length)}
+        {true && (
           <TouchableOpacity 
             style={styles.splitToggle} 
             onPress={() => setSplitEnabled(!splitEnabled)}
           >
             <View style={styles.splitToggleLeft}>
               <Ionicons name="people-outline" size={20} color={colors.primary} />
-              <Text style={styles.splitToggleText}>Split bill with friends</Text>
+              <Text style={styles.splitToggleText}>
+                Split bill with friends {customer?.friends ? `(${customer.friends.length})` : '(0)'}
+              </Text>
             </View>
             <View style={[styles.toggle, splitEnabled && styles.toggleActive]}>
               <View style={[styles.toggleDot, splitEnabled && styles.toggleDotActive]} />
