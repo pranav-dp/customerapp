@@ -32,6 +32,8 @@ export interface Order {
   razorpayOrderId?: string;
   orderNumber: string;
   splitSummary?: Record<string, number>;
+  isReviewed?: boolean;
+  reviewId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -149,4 +151,21 @@ export const subscribeToOrder = (orderId: string, callback: (order: Order | null
       callback(null);
     }
   });
+};
+
+// Get customer orders for a specific restaurant
+export const getCustomerOrdersByRestaurant = async (customerId: string, restaurantId: string) => {
+  try {
+    const q = query(
+      collection(db, 'orders'),
+      where('customerId', '==', customerId),
+      where('restaurantId', '==', restaurantId),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return { success: true, data: orders };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 };

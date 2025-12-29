@@ -1,13 +1,20 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { subscribeToOrder, Order } from '../../services/orders';
+import { useCart } from '../../contexts/CartContext';
 import { formatPrice } from '../../utils/restaurant';
 import { sendLocalNotification } from '../../services/notifications';
+import * as Haptics from 'expo-haptics';
+
+interface ExtendedOrder extends Order {
+  isReviewed?: boolean;
+  reviewId?: string;
+}
 
 const STEPS = ['pending', 'confirmed', 'preparing', 'ready', 'completed'];
 const STEP_LABELS = ['Order Placed', 'Confirmed', 'Preparing', 'Ready for Pickup', 'Completed'];
@@ -15,7 +22,8 @@ const STEP_LABELS = ['Order Placed', 'Confirmed', 'Preparing', 'Ready for Pickup
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [order, setOrder] = useState<Order | null>(null);
+  const { addItem, clearCart } = useCart();
+  const [order, setOrder] = useState<ExtendedOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const prevStatusRef = useRef<string | null>(null);
 
@@ -31,12 +39,52 @@ export default function OrderDetailScreen() {
         );
       }
       prevStatusRef.current = orderData?.status || null;
-      setOrder(orderData);
+      setOrder(orderData as ExtendedOrder);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, [id]);
+
+  const handleReviewOrder = () => {
+    if (!order) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(`/review/${order.id}`);
+  };
+
+  const handleReorder = () => {
+    if (!order) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      'Reorder',
+      `Add ${order.items.length} items from ${order.restaurantName} to cart?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Add to Cart',
+          onPress: () => {
+            clearCart();
+            order.items.forEach(item => {
+              for (let i = 0; i < item.quantity; i++) {
+                addItem({
+                  id: item.id,
+                  name: item.name,
+                  price: item.price,
+                  isVeg: item.isVeg,
+                  restaurantId: order.restaurantId,
+                  restaurantName: order.restaurantName,
+                });
+              }
+            });
+            router.push('/cart');
+          },
+        },
+      ]
+    );
+  };
+
+  const canReview = order?.status === 'completed' && order?.paymentStatus === 'paid' && !order?.isReviewed;
+  const canReorder = order?.status === 'completed' || order?.status === 'cancelled';
 
   if (loading) {
     return (
@@ -194,7 +242,33 @@ export default function OrderDetailScreen() {
               {order.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
             </Text>
           </View>
+          {order.isReviewed && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Review</Text>
+              <Text style={[styles.infoValue, { color: colors.success }]}>Reviewed ✓</Text>
+            </View>
+          )}
         </View>
+
+        {/* Review Button */}
+        {canReview && (
+          <View style={styles.reviewSection}>
+            <TouchableOpacity style={styles.reviewButton} onPress={handleReviewOrder}>
+              <Ionicons name="star-outline" size={20} color={colors.white} />
+              <Text style={styles.reviewButtonText}>Review Order</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Reorder Button */}
+        {canReorder && (
+          <View style={styles.reorderSection}>
+            <TouchableOpacity style={styles.reorderButton} onPress={handleReorder}>
+              <Ionicons name="refresh" size={20} color={colors.primary} />
+              <Text style={styles.reorderButtonText}>Reorder</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -422,5 +496,44 @@ const styles = StyleSheet.create({
   splitAmount: {
     ...textStyles.label,
     color: colors.success,
+  },
+  reviewSection: {
+    padding: spacing.lg,
+    backgroundColor: colors.white,
+    marginTop: spacing.sm,
+  },
+  reviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.lg,
+    gap: spacing.sm,
+  },
+  reviewButtonText: {
+    ...textStyles.label,
+    color: colors.white,
+  },
+  reorderSection: {
+    padding: spacing.lg,
+    backgroundColor: colors.white,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  reorderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary + '15',
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    gap: spacing.sm,
+  },
+  reorderButtonText: {
+    ...textStyles.label,
+    color: colors.primary,
   },
 });

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { colors, spacing, borderRadius } from '../constants/colors';
 import { textStyles } from '../constants/typography';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,15 +46,23 @@ export default function InsightsScreen() {
   const topItems = Object.values(itemCounts).sort((a, b) => b.count - a.count).slice(0, 5);
 
   // Restaurant breakdown
-  const restaurantSpend: Record<string, { name: string; spent: number; orders: number }> = {};
+  const restaurantSpend: Record<string, { id: string; name: string; spent: number; orders: number }> = {};
   orders.forEach(order => {
     if (!restaurantSpend[order.restaurantId]) {
-      restaurantSpend[order.restaurantId] = { name: order.restaurantName, spent: 0, orders: 0 };
+      restaurantSpend[order.restaurantId] = { id: order.restaurantId, name: order.restaurantName, spent: 0, orders: 0 };
     }
     restaurantSpend[order.restaurantId].spent += order.totalAmount;
     restaurantSpend[order.restaurantId].orders += 1;
   });
   const topRestaurants = Object.values(restaurantSpend).sort((a, b) => b.spent - a.spent);
+
+  const handleRestaurantPress = (restaurant: { id: string; name: string }) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+      pathname: '/restaurant-orders/[restaurantId]',
+      params: { restaurantId: restaurant.id, restaurantName: restaurant.name }
+    } as any);
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -106,13 +115,21 @@ export default function InsightsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>🏪 By Restaurant</Text>
             {topRestaurants.map(r => (
-              <View key={r.name} style={styles.listItem}>
+              <TouchableOpacity 
+                key={r.id} 
+                style={styles.restaurantItem}
+                onPress={() => handleRestaurantPress(r)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.listItemInfo}>
                   <Text style={styles.listItemName}>{r.name}</Text>
                   <Text style={styles.listItemSub}>{r.orders} orders</Text>
                 </View>
-                <Text style={styles.listItemAmount}>{formatPrice(r.spent)}</Text>
-              </View>
+                <View style={styles.restaurantRight}>
+                  <Text style={styles.listItemAmount}>{formatPrice(r.spent)}</Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -149,6 +166,18 @@ const styles = StyleSheet.create({
   section: { backgroundColor: colors.white, borderRadius: borderRadius.lg, padding: spacing.lg, marginBottom: spacing.lg },
   sectionTitle: { ...textStyles.h4, color: colors.textPrimary, marginBottom: spacing.md },
   listItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.gray100 },
+  restaurantItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: spacing.md, 
+    borderBottomWidth: 1, 
+    borderBottomColor: colors.gray100,
+  },
+  restaurantRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   rank: { ...textStyles.label, color: colors.primary, width: 30 },
   listItemInfo: { flex: 1 },
   listItemName: { ...textStyles.body, color: colors.textPrimary },

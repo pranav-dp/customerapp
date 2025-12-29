@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, borderRadius, shadows } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { useAuth } from '../../contexts/AuthContext';
 import { getCustomerOrders } from '../../services/orders';
 import { getMoneyOwedToMe } from '../../services/friends';
+import { getReviewsByCustomer } from '../../services/reviews';
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -40,25 +42,46 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [stats, setStats] = useState({ orders: 0, spent: 0 });
   const [owedToMe, setOwedToMe] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [reviewableOrders, setReviewableOrders] = useState<any[]>([]);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!user) return;
-      const result = await getCustomerOrders(user.uid);
-      if (result.success) {
-        const paidOrders = (result.data as any[]).filter(o => o.paymentStatus === 'paid');
-        const totalSpent = paidOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-        setStats({ orders: paidOrders.length, spent: totalSpent });
-      }
-    };
-    const fetchOwed = async () => {
-      if (!customer?.id) return;
-      const result = await getMoneyOwedToMe(customer.id);
-      if (result.success) setOwedToMe(result.total);
-    };
-    fetchStats();
-    fetchOwed();
-  }, [user, customer?.id]);
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    
+    // Fetch orders stats
+    const ordersResult = await getCustomerOrders(user.uid);
+    if (ordersResult.success) {
+      const paidOrders = (ordersResult.data as any[]).filter(o => o.paymentStatus === 'paid');
+      const totalSpent = paidOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+      setStats({ orders: paidOrders.length, spent: totalSpent });
+      
+      // Get reviewable orders (completed and not reviewed)
+      const reviewable = paidOrders
+        .filter(o => o.status === 'completed' && !o.isReviewed)
+        .slice(0, 3);
+      setReviewableOrders(reviewable);
+    }
+    
+    // Fetch review count
+    const reviewsResult = await getReviewsByCustomer(user.uid);
+    if (reviewsResult.success) {
+      setReviewCount(reviewsResult.data.length);
+    }
+  }, [user]);
+
+  const fetchOwed = useCallback(async () => {
+    if (!customer?.id) return;
+    const result = await getMoneyOwedToMe(customer.id);
+    if (result.success) setOwedToMe(result.total);
+  }, [customer?.id]);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+      fetchOwed();
+    }, [fetchData, fetchOwed])
+  );
 
   const iOwe = Object.values(customer?.owes || {}).reduce((sum, amt) => sum + amt, 0);
 
@@ -164,6 +187,18 @@ export default function ProfileScreen() {
               title="Friends"
               subtitle={`${customer?.friends?.length || 0} friends for bill splitting`}
               onPress={() => router.push('/friends')}
+            />
+            <MenuItem
+              icon="star-outline"
+              title="Your Reviews"
+              subtitle={`${reviewCount} reviews posted`}
+              onPress={() => router.push('/your-reviews')}
+            />
+            <MenuItem
+              icon="create-outline"
+              title="Review Your Orders"
+              subtitle={`${reviewableOrders.length} orders to review`}
+              onPress={() => router.push('/review-orders')}
             />
           </View>
         </View>

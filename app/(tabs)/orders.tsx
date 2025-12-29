@@ -29,7 +29,7 @@ const OrderCard = ({ order, onReorder }: { order: Order; onReorder: () => void }
   const isReady = order.status === 'ready';
   const date = order.createdAt instanceof Date ? order.createdAt : 
     (order.createdAt as any)?.toDate?.() || new Date();
-  const canReorder = order.status === 'completed';
+  const canReorder = order.status === 'completed' || order.status === 'cancelled';
   
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

@@ -17,11 +17,15 @@ interface Restaurant {
   heroImage?: string;
   operatingHours?: OperatingHours;
   menu?: any[];
+  rating?: number;
+  reviewCount?: number;
 }
 
 function RestaurantCard({ restaurant, onPress }: { restaurant: Restaurant; onPress: () => void }) {
   const status = getRestaurantStatus(restaurant.operatingHours);
   const menuCount = restaurant.menu?.filter(i => i.isAvailable).length || 0;
+  const rating = restaurant.rating || 0;
+  const reviewCount = restaurant.reviewCount || 0;
 
   return (
     <TouchableOpacity style={styles.restaurantCard} onPress={onPress} activeOpacity={0.7}>
@@ -37,6 +41,12 @@ function RestaurantCard({ restaurant, onPress }: { restaurant: Restaurant; onPre
           <View style={[styles.statusDot, !status.isOpen && styles.statusDotClosed]} />
           <Text style={[styles.statusText, !status.isOpen && styles.statusTextClosed]} numberOfLines={1}>
             {status.isOpen ? 'Open now' : status.message}
+          </Text>
+        </View>
+        <View style={styles.ratingRow}>
+          <Ionicons name={rating > 0 ? "star" : "star-outline"} size={14} color={rating > 0 ? colors.warning : colors.gray400} />
+          <Text style={styles.ratingText}>
+            {rating > 0 ? `${rating.toFixed(1)} (${reviewCount})` : 'No reviews yet'}
           </Text>
         </View>
       </View>
@@ -434,6 +444,16 @@ const styles = StyleSheet.create({
   },
   statusTextClosed: {
     color: colors.error,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  ratingText: {
+    ...textStyles.caption,
+    color: colors.textSecondary,
+    marginLeft: spacing.xs,
   },
   emptyState: {
     alignItems: 'center',

@@ -35,7 +35,8 @@ export default function MoneyOwedScreen() {
         if (amount > 0) {
           const result = await getCustomer(id);
           if (result.success && result.data) {
-            iOweItems.push({ id, name: result.data.name, username: result.data.username || '', amount });
+            const data = result.data as { id: string; name: string; username?: string };
+            iOweItems.push({ id, name: data.name || 'Unknown', username: data.username || '', amount });
           }
         }
       }

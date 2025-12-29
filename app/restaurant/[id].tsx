@@ -13,6 +13,8 @@ import { Skeleton } from '../../components/ui';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { toggleFavorite } from '../../services/friends';
+import { StarRating } from '../../components/StarRating';
+import * as Haptics from 'expo-haptics';
 
 interface Restaurant {
   id: string;
@@ -21,6 +23,8 @@ interface Restaurant {
   heroImage?: string;
   operatingHours?: OperatingHours;
   menu?: MenuItem[];
+  rating?: number;
+  reviewCount?: number;
 }
 
 export default function RestaurantDetailScreen() {
@@ -39,6 +43,20 @@ export default function RestaurantDetailScreen() {
     if (!customer?.id || !id) return;
     await toggleFavorite(customer.id, id, isFavorite);
     refreshCustomer?.();
+  };
+
+  const handleViewReviews = () => {
+    if (!restaurant) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+      pathname: '/restaurant-reviews/[restaurantId]',
+      params: { 
+        restaurantId: restaurant.id, 
+        restaurantName: restaurant.name,
+        rating: String(restaurant.rating || 0),
+        reviewCount: String(restaurant.reviewCount || 0),
+      }
+    } as any);
   };
 
   useEffect(() => {
@@ -193,6 +211,21 @@ export default function RestaurantDetailScreen() {
             <Text style={styles.restaurantDescription}>{restaurant.description}</Text>
           )}
           
+          {/* Reviews Section - Tappable */}
+          <TouchableOpacity style={styles.reviewsSection} onPress={handleViewReviews} activeOpacity={0.7}>
+            <View style={styles.reviewsLeft}>
+              <StarRating 
+                rating={Math.round(restaurant.rating || 0)} 
+                size={16} 
+                readonly 
+              />
+              <Text style={styles.reviewsText}>
+                {(restaurant.rating || 0).toFixed(1)} ({restaurant.reviewCount || 0} reviews)
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </TouchableOpacity>
+          
           {/* Status Badge */}
           <View style={styles.statusRow}>
             <View style={[styles.statusBadge, status.isOpen ? styles.statusOpen : styles.statusClosed]}>
@@ -339,6 +372,25 @@ const styles = StyleSheet.create({
     ...textStyles.body,
     color: colors.textSecondary,
     marginBottom: spacing.md,
+  },
+  reviewsSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.gray50,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+  },
+  reviewsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewsText: {
+    ...textStyles.bodySmall,
+    color: colors.textSecondary,
+    marginLeft: spacing.sm,
   },
   statusRow: {
     flexDirection: 'row',
