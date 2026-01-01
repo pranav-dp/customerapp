@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, T
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, shadows } from '../../constants/colors';
+import { spacing, borderRadius, shadows } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { useAuth } from '../../contexts/AuthContext';
+import { useColors } from '../../hooks/useColors';
 import { getRestaurants } from '../../services/firestore';
 import { getRestaurantStatus, OperatingHours } from '../../utils/restaurant';
 import { Skeleton } from '../../components/ui';
@@ -21,31 +22,31 @@ interface Restaurant {
   reviewCount?: number;
 }
 
-function RestaurantCard({ restaurant, onPress }: { restaurant: Restaurant; onPress: () => void }) {
+function RestaurantCard({ restaurant, onPress, colors }: { restaurant: Restaurant; onPress: () => void; colors: ReturnType<typeof useColors> }) {
   const status = getRestaurantStatus(restaurant.operatingHours);
   const menuCount = restaurant.menu?.filter(i => i.isAvailable).length || 0;
   const rating = restaurant.rating || 0;
   const reviewCount = restaurant.reviewCount || 0;
 
   return (
-    <TouchableOpacity style={styles.restaurantCard} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.restaurantImagePlaceholder}>
+    <TouchableOpacity style={[styles.restaurantCard, { backgroundColor: colors.white }, shadows.md]} onPress={onPress} activeOpacity={0.7}>
+      <View style={[styles.restaurantImagePlaceholder, { backgroundColor: colors.gray100 }]}>
         <Ionicons name="storefront" size={36} color={colors.gray400} />
       </View>
       <View style={styles.restaurantInfo}>
-        <Text style={styles.restaurantName} numberOfLines={1}>{restaurant.name}</Text>
-        <Text style={styles.restaurantMeta} numberOfLines={1}>
+        <Text style={[styles.restaurantName, { color: colors.textPrimary }]} numberOfLines={1}>{restaurant.name}</Text>
+        <Text style={[styles.restaurantMeta, { color: colors.textSecondary }]} numberOfLines={1}>
           {menuCount > 0 ? `${menuCount} items available` : restaurant.description || 'Menu coming soon'}
         </Text>
         <View style={styles.restaurantStatus}>
-          <View style={[styles.statusDot, !status.isOpen && styles.statusDotClosed]} />
-          <Text style={[styles.statusText, !status.isOpen && styles.statusTextClosed]} numberOfLines={1}>
+          <View style={[styles.statusDot, { backgroundColor: status.isOpen ? colors.success : colors.error }]} />
+          <Text style={[styles.statusText, { color: status.isOpen ? colors.success : colors.error }]} numberOfLines={1}>
             {status.isOpen ? 'Open now' : status.message}
           </Text>
         </View>
         <View style={styles.ratingRow}>
           <Ionicons name={rating > 0 ? "star" : "star-outline"} size={14} color={rating > 0 ? colors.warning : colors.gray400} />
-          <Text style={styles.ratingText}>
+          <Text style={[styles.ratingText, { color: colors.textSecondary }]}>
             {rating > 0 ? `${rating.toFixed(1)} (${reviewCount})` : 'No reviews yet'}
           </Text>
         </View>
@@ -55,9 +56,9 @@ function RestaurantCard({ restaurant, onPress }: { restaurant: Restaurant; onPre
   );
 }
 
-function RestaurantSkeleton() {
+function RestaurantSkeleton({ colors }: { colors: ReturnType<typeof useColors> }) {
   return (
-    <View style={styles.restaurantCard}>
+    <View style={[styles.restaurantCard, { backgroundColor: colors.white }]}>
       <Skeleton width={80} height={80} borderRadius={borderRadius.lg} />
       <View style={styles.restaurantInfo}>
         <Skeleton width={140} height={18} style={{ marginBottom: 8 }} />
@@ -75,6 +76,7 @@ interface SearchResult {
 
 export default function HomeScreen() {
   const { customer } = useAuth();
+  const colors = useColors();
   const router = useRouter();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +128,7 @@ export default function HomeScreen() {
   }, [searchQuery, restaurants]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -135,19 +137,19 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Hi, {firstName}! 👋</Text>
-            <Text style={styles.subGreeting}>What would you like to eat?</Text>
+            <Text style={[styles.greeting, { color: colors.textPrimary }]}>Hi, {firstName}! 👋</Text>
+            <Text style={[styles.subGreeting, { color: colors.textSecondary }]}>What would you like to eat?</Text>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity style={[styles.notificationButton, { backgroundColor: colors.gray100 }]}>
             <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchBar}>
+        <View style={[styles.searchBar, { backgroundColor: colors.gray100 }]}>
           <Ionicons name="search" size={20} color={colors.gray500} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.textPrimary }]}
             placeholder="Search for dishes..."
             placeholderTextColor={colors.gray500}
             value={searchQuery}
@@ -163,25 +165,25 @@ export default function HomeScreen() {
         {/* Search Results */}
         {searchQuery.length > 0 ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
               {searchResults.length > 0 ? `Found ${searchResults.length} items` : 'No items found'}
             </Text>
             {searchResults.map((result, index) => (
               <TouchableOpacity
                 key={`${result.restaurant.id}-${result.item.id}-${index}`}
-                style={styles.searchResultCard}
+                style={[styles.searchResultCard, { backgroundColor: colors.white, borderColor: colors.gray100 }]}
                 onPress={() => router.push(`/restaurant/${result.restaurant.id}`)}
               >
                 <View style={styles.searchResultLeft}>
-                  <View style={[styles.vegIndicator, result.item.isVeg ? styles.vegVeg : styles.vegNonVeg]}>
-                    <View style={[styles.vegDot, result.item.isVeg ? styles.dotVeg : styles.dotNonVeg]} />
+                  <View style={[styles.vegIndicator, { borderColor: result.item.isVeg ? colors.veg : colors.nonVeg }]}>
+                    <View style={[styles.vegDot, { backgroundColor: result.item.isVeg ? colors.veg : colors.nonVeg }]} />
                   </View>
                   <View style={styles.searchResultInfo}>
-                    <Text style={styles.searchResultName}>{result.item.name}</Text>
-                    <Text style={styles.searchResultRestaurant}>{result.restaurant.name}</Text>
+                    <Text style={[styles.searchResultName, { color: colors.textPrimary }]}>{result.item.name}</Text>
+                    <Text style={[styles.searchResultRestaurant, { color: colors.textSecondary }]}>{result.restaurant.name}</Text>
                   </View>
                 </View>
-                <Text style={styles.searchResultPrice}>₹{result.item.price}</Text>
+                <Text style={[styles.searchResultPrice, { color: colors.success }]}>₹{result.item.price}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -192,39 +194,39 @@ export default function HomeScreen() {
             <View style={[styles.quickActionIcon, { backgroundColor: colors.primaryLight }]}>
               <Ionicons name="fast-food" size={24} color={colors.primary} />
             </View>
-            <Text style={styles.quickActionText}>All</Text>
+            <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>All</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickActionItem}>
-            <View style={[styles.quickActionIcon, { backgroundColor: '#E8F5E9' }]}>
+            <View style={[styles.quickActionIcon, { backgroundColor: colors.successLight }]}>
               <Ionicons name="leaf" size={24} color={colors.veg} />
             </View>
-            <Text style={styles.quickActionText}>Veg</Text>
+            <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>Veg</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickActionItem}>
-            <View style={[styles.quickActionIcon, { backgroundColor: '#FFEBEE' }]}>
+            <View style={[styles.quickActionIcon, { backgroundColor: colors.errorLight }]}>
               <Ionicons name="nutrition" size={24} color={colors.nonVeg} />
             </View>
-            <Text style={styles.quickActionText}>Non-Veg</Text>
+            <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>Non-Veg</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickActionItem}>
-            <View style={[styles.quickActionIcon, { backgroundColor: '#FFF3E0' }]}>
+            <View style={[styles.quickActionIcon, { backgroundColor: colors.warningLight }]}>
               <Ionicons name="cafe" size={24} color={colors.warning} />
             </View>
-            <Text style={styles.quickActionText}>Drinks</Text>
+            <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>Drinks</Text>
           </TouchableOpacity>
         </View>
 
         {/* Restaurants Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Campus Restaurants</Text>
-            <Text style={styles.restaurantCount}>{restaurants.length} available</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Campus Restaurants</Text>
+            <Text style={[styles.restaurantCount, { color: colors.textTertiary }]}>{restaurants.length} available</Text>
           </View>
 
           {loading ? (
             <>
-              <RestaurantSkeleton />
-              <RestaurantSkeleton />
+              <RestaurantSkeleton colors={colors} />
+              <RestaurantSkeleton colors={colors} />
             </>
           ) : restaurants.length > 0 ? (
             restaurants.map((restaurant) => (
@@ -232,24 +234,25 @@ export default function HomeScreen() {
                 key={restaurant.id}
                 restaurant={restaurant}
                 onPress={() => router.push(`/restaurant/${restaurant.id}`)}
+                colors={colors}
               />
             ))
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="storefront-outline" size={48} color={colors.gray300} />
-              <Text style={styles.emptyText}>No restaurants available yet</Text>
+              <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No restaurants available yet</Text>
             </View>
           )}
         </View>
 
         {/* Info Banner */}
-        <View style={styles.infoBanner}>
-          <View style={styles.infoBannerIcon}>
+        <View style={[styles.infoBanner, { backgroundColor: colors.primaryLight }]}>
+          <View style={[styles.infoBannerIcon, { backgroundColor: colors.white }]}>
             <Ionicons name="flash" size={24} color={colors.primary} />
           </View>
           <View style={styles.infoBannerContent}>
-            <Text style={styles.infoBannerTitle}>Skip the queue!</Text>
-            <Text style={styles.infoBannerText}>Order ahead and pick up when ready</Text>
+            <Text style={[styles.infoBannerTitle, { color: colors.textPrimary }]}>Skip the queue!</Text>
+            <Text style={[styles.infoBannerText, { color: colors.textSecondary }]}>Order ahead and pick up when ready</Text>
           </View>
         </View>
         </>
@@ -262,7 +265,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingBottom: 100,
@@ -277,25 +279,21 @@ const styles = StyleSheet.create({
   },
   greeting: {
     ...textStyles.h1,
-    color: colors.textPrimary,
   },
   subGreeting: {
     ...textStyles.body,
-    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
   notificationButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray100,
     marginHorizontal: spacing.xl,
     marginVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
@@ -305,7 +303,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     ...textStyles.body,
-    color: colors.textPrimary,
     marginLeft: spacing.md,
     paddingVertical: 0,
   },
@@ -313,12 +310,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.white,
     padding: spacing.md,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.gray100,
   },
   searchResultLeft: {
     flexDirection: 'row',
@@ -333,26 +328,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  vegVeg: { borderColor: colors.veg },
-  vegNonVeg: { borderColor: colors.nonVeg },
   vegDot: { width: 8, height: 8, borderRadius: 4 },
-  dotVeg: { backgroundColor: colors.veg },
-  dotNonVeg: { backgroundColor: colors.nonVeg },
   searchResultInfo: {
     marginLeft: spacing.md,
     flex: 1,
   },
   searchResultName: {
     ...textStyles.label,
-    color: colors.textPrimary,
   },
   searchResultRestaurant: {
     ...textStyles.caption,
-    color: colors.textSecondary,
   },
   searchResultPrice: {
     ...textStyles.label,
-    color: colors.success,
   },
   quickActions: {
     flexDirection: 'row',
@@ -373,7 +361,6 @@ const styles = StyleSheet.create({
   },
   quickActionText: {
     ...textStyles.labelSmall,
-    color: colors.textSecondary,
   },
   section: {
     paddingHorizontal: spacing.xl,
@@ -387,26 +374,21 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...textStyles.h2,
-    color: colors.textPrimary,
   },
   restaurantCount: {
     ...textStyles.labelSmall,
-    color: colors.textTertiary,
   },
   restaurantCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
     marginBottom: spacing.md,
-    ...shadows.md,
   },
   restaurantImagePlaceholder: {
     width: 80,
     height: 80,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -416,11 +398,9 @@ const styles = StyleSheet.create({
   },
   restaurantName: {
     ...textStyles.h4,
-    color: colors.textPrimary,
   },
   restaurantMeta: {
     ...textStyles.bodySmall,
-    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
   restaurantStatus: {
@@ -432,18 +412,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.success,
     marginRight: spacing.sm,
-  },
-  statusDotClosed: {
-    backgroundColor: colors.error,
   },
   statusText: {
     ...textStyles.labelSmall,
-    color: colors.success,
-  },
-  statusTextClosed: {
-    color: colors.error,
   },
   ratingRow: {
     flexDirection: 'row',
@@ -452,7 +424,6 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     ...textStyles.caption,
-    color: colors.textSecondary,
     marginLeft: spacing.xs,
   },
   emptyState: {
@@ -461,11 +432,9 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...textStyles.body,
-    color: colors.textTertiary,
   },
   infoBanner: {
     flexDirection: 'row',
-    backgroundColor: colors.primaryLight,
     marginHorizontal: spacing.xl,
     marginBottom: spacing.xxl,
     padding: spacing.lg,
@@ -475,7 +444,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -486,11 +454,9 @@ const styles = StyleSheet.create({
   },
   infoBannerTitle: {
     ...textStyles.h4,
-    color: colors.textPrimary,
   },
   infoBannerText: {
     ...textStyles.bodySmall,
-    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
 });

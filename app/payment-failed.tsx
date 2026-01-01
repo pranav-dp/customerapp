@@ -4,12 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors, spacing, borderRadius } from '../constants/colors';
+import { spacing, borderRadius } from '../constants/colors';
+import { useColors } from '../hooks/useColors';
 import { textStyles } from '../constants/typography';
 import { Button } from '../components/ui';
 import { useEffect } from 'react';
 
 export default function PaymentFailedScreen() {
+  const colors = useColors();
   const router = useRouter();
   const { reason } = useLocalSearchParams<{ reason?: string }>();
 
@@ -18,20 +20,20 @@ export default function PaymentFailedScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        <View style={styles.iconContainer}>
+        <View style={[styles.iconContainer, { backgroundColor: colors.errorLight }]}>
           <Ionicons name="close-circle" size={80} color={colors.error} />
         </View>
         
-        <Text style={styles.title}>Payment Failed</Text>
-        <Text style={styles.message}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Payment Failed</Text>
+        <Text style={[styles.message, { color: colors.textSecondary }]}>
           {reason || 'Your payment could not be processed. Please try again.'}
         </Text>
 
-        <View style={styles.infoBox}>
+        <View style={[styles.infoBox, { backgroundColor: colors.gray100 }]}>
           <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
-          <Text style={styles.infoText}>
+          <Text style={[styles.infoText, { color: colors.textSecondary }]}>
             Don't worry, no money was deducted from your account.
           </Text>
         </View>
@@ -56,32 +58,29 @@ export default function PaymentFailedScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   iconContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: colors.errorLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
   },
-  title: { ...textStyles.h1, color: colors.textPrimary, marginBottom: spacing.md },
+  title: { ...textStyles.h1, marginBottom: spacing.md },
   message: {
     ...textStyles.body,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray100,
     padding: spacing.lg,
     borderRadius: borderRadius.lg,
     gap: spacing.sm,
   },
-  infoText: { ...textStyles.bodySmall, color: colors.textSecondary, flex: 1 },
+  infoText: { ...textStyles.bodySmall, flex: 1 },
   footer: { padding: spacing.xl },
 });

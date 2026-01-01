@@ -1,7 +1,8 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { colors, borderRadius } from '../../constants/colors';
+import { borderRadius } from '../../constants/colors';
+import { useColors } from '../../hooks/useColors';
 import { textStyles } from '../../constants/typography';
 
 interface ButtonProps {
@@ -29,6 +30,7 @@ export default function Button({
   textStyle,
   fullWidth = false,
 }: ButtonProps) {
+  const colors = useColors();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -43,26 +45,65 @@ export default function Button({
     scale.value = withSpring(1, { damping: 15 });
   };
 
-  const buttonStyles = [
-    styles.base,
-    styles[variant],
-    styles[size],
-    fullWidth && styles.fullWidth,
-    disabled && styles.disabled,
-    style,
-  ];
+  const getButtonStyle = () => {
+    const baseStyle: ViewStyle = {
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: borderRadius.lg,
+    };
 
-  const textStyles2 = [
-    styles.text,
-    styles[`${variant}Text`],
-    styles[`${size}Text`],
-    disabled && styles.disabledText,
-    textStyle,
-  ];
+    const variantStyles: Record<string, ViewStyle> = {
+      primary: { backgroundColor: colors.primary },
+      secondary: { backgroundColor: colors.gray100 },
+      outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.primary },
+      ghost: { backgroundColor: 'transparent' },
+    };
+
+    const sizeStyles: Record<string, ViewStyle> = {
+      small: { paddingVertical: 10, paddingHorizontal: 16 },
+      medium: { paddingVertical: 14, paddingHorizontal: 24 },
+      large: { paddingVertical: 18, paddingHorizontal: 32 },
+    };
+
+    const disabledStyle: ViewStyle = disabled 
+      ? { backgroundColor: colors.gray200, borderColor: colors.gray200 } 
+      : {};
+
+    return [
+      baseStyle,
+      variantStyles[variant],
+      sizeStyles[size],
+      fullWidth && { width: '100%' as const },
+      disabledStyle,
+      style,
+    ];
+  };
+
+  const getTextStyle = () => {
+    const variantTextColors: Record<string, string> = {
+      primary: colors.black,
+      secondary: colors.textPrimary,
+      outline: colors.primary,
+      ghost: colors.primary,
+    };
+
+    const sizeTextStyles: Record<string, TextStyle> = {
+      small: textStyles.buttonSmall,
+      medium: textStyles.button,
+      large: { ...textStyles.button, fontSize: 18 },
+    };
+
+    return [
+      textStyles.button,
+      { color: disabled ? colors.textDisabled : variantTextColors[variant] },
+      sizeTextStyles[size],
+      textStyle,
+    ];
+  };
 
   return (
     <AnimatedTouchable
-      style={[buttonStyles, animatedStyle]}
+      style={[getButtonStyle(), animatedStyle]}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
@@ -72,89 +113,8 @@ export default function Button({
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? colors.black : colors.primary} size="small" />
       ) : (
-        <Text style={textStyles2}>{title}</Text>
+        <Text style={getTextStyle()}>{title}</Text>
       )}
     </AnimatedTouchable>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.lg,
-  },
-  fullWidth: {
-    width: '100%',
-  },
-
-  // Variants
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  secondary: {
-    backgroundColor: colors.gray100,
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
-
-  // Sizes
-  small: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  medium: {
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-  },
-  large: {
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-  },
-
-  // Text base
-  text: {
-    ...textStyles.button,
-  },
-
-  // Text variants
-  primaryText: {
-    color: colors.black,
-  },
-  secondaryText: {
-    color: colors.textPrimary,
-  },
-  outlineText: {
-    color: colors.primary,
-  },
-  ghostText: {
-    color: colors.primary,
-  },
-
-  // Text sizes
-  smallText: {
-    ...textStyles.buttonSmall,
-  },
-  mediumText: {
-    ...textStyles.button,
-  },
-  largeText: {
-    ...textStyles.button,
-    fontSize: 18,
-  },
-
-  // Disabled
-  disabled: {
-    backgroundColor: colors.gray200,
-    borderColor: colors.gray200,
-  },
-  disabledText: {
-    color: colors.textDisabled,
-  },
-});

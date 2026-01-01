@@ -3,13 +3,15 @@ import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platfor
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '../constants/colors';
+import { spacing } from '../constants/colors';
+import { useColors } from '../hooks/useColors';
 import { textStyles } from '../constants/typography';
 import { Button, Input, Header } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const colors = useColors();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,7 +42,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.white }]} edges={['top', 'bottom']}>
       <Header showBack onBackPress={() => router.back()} />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -53,10 +55,10 @@ export default function LoginScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.logoSmall}>
+            <View style={[styles.logoSmall, { backgroundColor: colors.primaryLight }]}>
               <Ionicons name="restaurant" size={40} color={colors.primary} />
             </View>
-            <Text style={styles.title}>Log in to the{'\n'}good stuff</Text>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>Log in to the{'\n'}good stuff</Text>
           </View>
 
           {/* Form */}
@@ -84,21 +86,21 @@ export default function LoginScreen() {
             />
 
             <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
+              <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>Forgot your password?</Text>
             </TouchableOpacity>
           </View>
 
           {/* Sign up link */}
           <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Not a member yet? </Text>
+            <Text style={[styles.signupText, { color: colors.textSecondary }]}>Not a member yet? </Text>
             <TouchableOpacity onPress={() => router.push('/signup')}>
-              <Text style={styles.signupLink}>Sign up</Text>
+              <Text style={[styles.signupLink, { color: colors.primary }]}>Sign up</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
 
         {/* Bottom Button */}
-        <View style={styles.bottomSection}>
+        <View style={[styles.bottomSection, { borderTopColor: colors.gray100 }]}>
           <Button
             title="Log in"
             onPress={handleLogin}
@@ -114,7 +116,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
   },
   keyboardView: {
     flex: 1,
@@ -133,14 +134,12 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.lg,
   },
   title: {
     ...textStyles.displayMedium,
-    color: colors.textPrimary,
     flex: 1,
   },
   form: {
@@ -151,7 +150,6 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     ...textStyles.label,
-    color: colors.primary,
   },
   signupContainer: {
     flexDirection: 'row',
@@ -160,16 +158,13 @@ const styles = StyleSheet.create({
   },
   signupText: {
     ...textStyles.body,
-    color: colors.textSecondary,
   },
   signupLink: {
     ...textStyles.label,
-    color: colors.primary,
   },
   bottomSection: {
     paddingHorizontal: spacing.xxl,
     paddingVertical: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.gray100,
   },
 });

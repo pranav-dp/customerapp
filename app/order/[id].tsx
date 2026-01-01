@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius } from '../../constants/colors';
+import { spacing, borderRadius } from '../../constants/colors';
+import { useColors } from '../../hooks/useColors';
 import { textStyles } from '../../constants/typography';
 import { subscribeToOrder, Order } from '../../services/orders';
 import { useCart } from '../../contexts/CartContext';
@@ -22,6 +23,7 @@ const STEP_LABELS = ['Order Placed', 'Confirmed', 'Preparing', 'Ready for Pickup
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const colors = useColors();
   const { addItem, clearCart } = useCart();
   const [order, setOrder] = useState<ExtendedOrder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,7 +90,7 @@ export default function OrderDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -98,12 +100,12 @@ export default function OrderDetailScreen() {
 
   if (!order) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={64} color={colors.error} />
-          <Text style={styles.errorText}>Order not found</Text>
+          <Text style={[styles.errorText, { color: colors.textPrimary }]}>Order not found</Text>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backLink}>Go Back</Text>
+            <Text style={[styles.backLink, { color: colors.primary }]}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -115,33 +117,33 @@ export default function OrderDetailScreen() {
     (order.createdAt as any)?.toDate?.() || new Date();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]} edges={['top', 'bottom']}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.white, borderBottomColor: colors.gray100 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order #{order.orderNumber}</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Order #{order.orderNumber}</Text>
         <View style={styles.backButton} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Status Card */}
-        <View style={styles.statusCard}>
+        <View style={[styles.statusCard, { backgroundColor: colors.white }]}>
           {order.status === 'cancelled' ? (
             <View style={styles.cancelledBanner}>
               <Ionicons name="close-circle" size={32} color={colors.error} />
-              <Text style={styles.cancelledText}>Order Cancelled</Text>
+              <Text style={[styles.cancelledText, { color: colors.error }]}>Order Cancelled</Text>
             </View>
           ) : order.status === 'ready' ? (
             <View style={styles.readyBanner}>
               <Ionicons name="checkmark-circle" size={48} color={colors.success} />
-              <Text style={styles.readyTitle}>Your order is ready!</Text>
-              <Text style={styles.readySubtitle}>Please pick it up from {order.restaurantName}</Text>
+              <Text style={[styles.readyTitle, { color: colors.success }]}>Your order is ready!</Text>
+              <Text style={[styles.readySubtitle, { color: colors.textSecondary }]}>Please pick it up from {order.restaurantName}</Text>
             </View>
           ) : (
             <>
-              <Text style={styles.statusTitle}>
+              <Text style={[styles.statusTitle, { color: colors.textPrimary }]}>
                 {order.status === 'preparing' ? 'Your food is being prepared' : 
                  order.status === 'confirmed' ? 'Order confirmed' : 'Order placed'}
               </Text>
@@ -152,7 +154,7 @@ export default function OrderDetailScreen() {
                   <View key={step} style={styles.stepContainer}>
                     <View style={[
                       styles.stepDot,
-                      index <= currentStepIndex && styles.stepDotActive
+                      { backgroundColor: index <= currentStepIndex ? colors.success : colors.gray200 }
                     ]}>
                       {index < currentStepIndex && (
                         <Ionicons name="checkmark" size={12} color={colors.white} />
@@ -161,7 +163,7 @@ export default function OrderDetailScreen() {
                     {index < 3 && (
                       <View style={[
                         styles.stepLine,
-                        index < currentStepIndex && styles.stepLineActive
+                        { backgroundColor: index < currentStepIndex ? colors.success : colors.gray200 }
                       ]} />
                     )}
                   </View>
@@ -171,7 +173,7 @@ export default function OrderDetailScreen() {
                 {STEP_LABELS.slice(0, 4).map((label, index) => (
                   <Text key={label} style={[
                     styles.stepLabel,
-                    index <= currentStepIndex && styles.stepLabelActive
+                    { color: index <= currentStepIndex ? colors.textPrimary : colors.textTertiary, fontWeight: index <= currentStepIndex ? '600' : 'normal' }
                   ]}>{label}</Text>
                 ))}
               </View>
@@ -180,56 +182,56 @@ export default function OrderDetailScreen() {
         </View>
 
         {/* Restaurant */}
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.white }]}>
           <View style={styles.sectionHeader}>
             <Ionicons name="restaurant-outline" size={20} color={colors.textPrimary} />
-            <Text style={styles.sectionTitle}>{order.restaurantName}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{order.restaurantName}</Text>
           </View>
         </View>
 
         {/* Items */}
-        <View style={styles.section}>
-          <Text style={styles.sectionSubtitle}>Order Items</Text>
+        <View style={[styles.section, { backgroundColor: colors.white }]}>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Order Items</Text>
           {order.items.map((item, index) => (
             <View key={index} style={styles.itemRow}>
-              <View style={[styles.vegIndicator, item.isVeg ? styles.vegVeg : styles.vegNonVeg]}>
-                <View style={[styles.vegDot, item.isVeg ? styles.dotVeg : styles.dotNonVeg]} />
+              <View style={[styles.vegIndicator, { borderColor: item.isVeg ? colors.veg : colors.nonVeg }]}>
+                <View style={[styles.vegDot, { backgroundColor: item.isVeg ? colors.veg : colors.nonVeg }]} />
               </View>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemQty}>x{item.quantity}</Text>
-              <Text style={styles.itemPrice}>{formatPrice(item.price * item.quantity)}</Text>
+              <Text style={[styles.itemName, { color: colors.textPrimary }]}>{item.name}</Text>
+              <Text style={[styles.itemQty, { color: colors.textSecondary }]}>x{item.quantity}</Text>
+              <Text style={[styles.itemPrice, { color: colors.textPrimary }]}>{formatPrice(item.price * item.quantity)}</Text>
             </View>
           ))}
           
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Paid</Text>
-            <Text style={styles.totalValue}>{formatPrice(order.totalAmount)}</Text>
+          <View style={[styles.totalRow, { borderTopColor: colors.gray100 }]}>
+            <Text style={[styles.totalLabel, { color: colors.textPrimary }]}>Total Paid</Text>
+            <Text style={[styles.totalValue, { color: colors.success }]}>{formatPrice(order.totalAmount)}</Text>
           </View>
         </View>
 
         {/* Bill Split */}
         {order.splitSummary && Object.keys(order.splitSummary).length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionSubtitle}>Bill Split</Text>
+          <View style={[styles.section, { backgroundColor: colors.white }]}>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Bill Split</Text>
             {Object.entries(order.splitSummary).map(([name, amount]) => (
-              <View key={name} style={styles.splitRow}>
-                <Text style={styles.splitName}>{name}</Text>
-                <Text style={styles.splitAmount}>{formatPrice(amount as number)}</Text>
+              <View key={name} style={[styles.splitRow, { borderBottomColor: colors.gray100 }]}>
+                <Text style={[styles.splitName, { color: colors.textPrimary }]}>{name}</Text>
+                <Text style={[styles.splitAmount, { color: colors.success }]}>{formatPrice(amount as number)}</Text>
               </View>
             ))}
           </View>
         )}
 
         {/* Order Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionSubtitle}>Order Details</Text>
+        <View style={[styles.section, { backgroundColor: colors.white }]}>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Order Details</Text>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Order ID</Text>
-            <Text style={styles.infoValue}>{order.id}</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Order ID</Text>
+            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{order.id}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Placed on</Text>
-            <Text style={styles.infoValue}>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Placed on</Text>
+            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>
               {date.toLocaleDateString('en-IN', { 
                 day: 'numeric', month: 'long', year: 'numeric',
                 hour: '2-digit', minute: '2-digit'
@@ -237,14 +239,14 @@ export default function OrderDetailScreen() {
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Payment</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Payment</Text>
             <Text style={[styles.infoValue, { color: colors.success }]}>
               {order.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
             </Text>
           </View>
           {order.isReviewed && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Review</Text>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Review</Text>
               <Text style={[styles.infoValue, { color: colors.success }]}>Reviewed ✓</Text>
             </View>
           )}
@@ -252,20 +254,20 @@ export default function OrderDetailScreen() {
 
         {/* Review Button */}
         {canReview && (
-          <View style={styles.reviewSection}>
-            <TouchableOpacity style={styles.reviewButton} onPress={handleReviewOrder}>
+          <View style={[styles.reviewSection, { backgroundColor: colors.white }]}>
+            <TouchableOpacity style={[styles.reviewButton, { backgroundColor: colors.primary }]} onPress={handleReviewOrder}>
               <Ionicons name="star-outline" size={20} color={colors.white} />
-              <Text style={styles.reviewButtonText}>Review Order</Text>
+              <Text style={[styles.reviewButtonText, { color: colors.white }]}>Review Order</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* Reorder Button */}
         {canReorder && (
-          <View style={styles.reorderSection}>
-            <TouchableOpacity style={styles.reorderButton} onPress={handleReorder}>
+          <View style={[styles.reorderSection, { backgroundColor: colors.white }]}>
+            <TouchableOpacity style={[styles.reorderButton, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]} onPress={handleReorder}>
               <Ionicons name="refresh" size={20} color={colors.primary} />
-              <Text style={styles.reorderButtonText}>Reorder</Text>
+              <Text style={[styles.reorderButtonText, { color: colors.primary }]}>Reorder</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -277,7 +279,6 @@ export default function OrderDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
   },
   loadingContainer: {
     flex: 1,
@@ -291,12 +292,10 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...textStyles.h3,
-    color: colors.textPrimary,
     marginTop: spacing.md,
   },
   backLink: {
     ...textStyles.label,
-    color: colors.primary,
     marginTop: spacing.md,
   },
   header: {
@@ -305,9 +304,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
   backButton: {
     width: 40,
@@ -318,16 +315,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...textStyles.h3,
-    color: colors.textPrimary,
   },
   statusCard: {
-    backgroundColor: colors.white,
     padding: spacing.xl,
     alignItems: 'center',
   },
   statusTitle: {
     ...textStyles.h3,
-    color: colors.textPrimary,
     marginBottom: spacing.xl,
   },
   progressContainer: {
@@ -345,20 +339,12 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.gray200,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  stepDotActive: {
-    backgroundColor: colors.success,
   },
   stepLine: {
     flex: 1,
     height: 3,
-    backgroundColor: colors.gray200,
-  },
-  stepLineActive: {
-    backgroundColor: colors.success,
   },
   stepLabels: {
     flexDirection: 'row',
@@ -369,12 +355,7 @@ const styles = StyleSheet.create({
   stepLabel: {
     flex: 1,
     ...textStyles.caption,
-    color: colors.textTertiary,
     textAlign: 'center',
-  },
-  stepLabelActive: {
-    color: colors.textPrimary,
-    fontWeight: '600',
   },
   readyBanner: {
     alignItems: 'center',
@@ -382,12 +363,10 @@ const styles = StyleSheet.create({
   },
   readyTitle: {
     ...textStyles.h2,
-    color: colors.success,
     marginTop: spacing.md,
   },
   readySubtitle: {
     ...textStyles.body,
-    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
   cancelledBanner: {
@@ -396,11 +375,9 @@ const styles = StyleSheet.create({
   },
   cancelledText: {
     ...textStyles.h3,
-    color: colors.error,
     marginTop: spacing.sm,
   },
   section: {
-    backgroundColor: colors.white,
     marginTop: spacing.sm,
     padding: spacing.lg,
   },
@@ -410,12 +387,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...textStyles.h4,
-    color: colors.textPrimary,
     marginLeft: spacing.sm,
   },
   sectionSubtitle: {
     ...textStyles.label,
-    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   itemRow: {
@@ -431,25 +406,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  vegVeg: { borderColor: colors.veg },
-  vegNonVeg: { borderColor: colors.nonVeg },
   vegDot: { width: 7, height: 7, borderRadius: 3.5 },
-  dotVeg: { backgroundColor: colors.veg },
-  dotNonVeg: { backgroundColor: colors.nonVeg },
   itemName: {
     ...textStyles.body,
-    color: colors.textPrimary,
     flex: 1,
     marginLeft: spacing.sm,
   },
   itemQty: {
     ...textStyles.body,
-    color: colors.textSecondary,
     marginHorizontal: spacing.md,
   },
   itemPrice: {
     ...textStyles.label,
-    color: colors.textPrimary,
   },
   totalRow: {
     flexDirection: 'row',
@@ -457,15 +425,12 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     marginTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.gray100,
   },
   totalLabel: {
     ...textStyles.h4,
-    color: colors.textPrimary,
   },
   totalValue: {
     ...textStyles.h3,
-    color: colors.success,
   },
   infoRow: {
     flexDirection: 'row',
@@ -474,11 +439,9 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     ...textStyles.body,
-    color: colors.textSecondary,
   },
   infoValue: {
     ...textStyles.body,
-    color: colors.textPrimary,
     flex: 1,
     textAlign: 'right',
   },
@@ -487,37 +450,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
   splitName: {
     ...textStyles.body,
-    color: colors.textPrimary,
   },
   splitAmount: {
     ...textStyles.label,
-    color: colors.success,
   },
   reviewSection: {
     padding: spacing.lg,
-    backgroundColor: colors.white,
     marginTop: spacing.sm,
   },
   reviewButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
     paddingVertical: spacing.lg,
     borderRadius: borderRadius.lg,
     gap: spacing.sm,
   },
   reviewButtonText: {
     ...textStyles.label,
-    color: colors.white,
   },
   reorderSection: {
     padding: spacing.lg,
-    backgroundColor: colors.white,
     marginTop: spacing.sm,
     marginBottom: spacing.xl,
   },
@@ -525,15 +481,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary + '15',
     paddingVertical: spacing.lg,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.primary,
     gap: spacing.sm,
   },
   reorderButtonText: {
     ...textStyles.label,
-    color: colors.primary,
   },
 });

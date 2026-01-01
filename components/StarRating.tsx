@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '../constants/colors';
+import { spacing } from '../constants/colors';
+import { useColors } from '../hooks/useColors';
 import { textStyles } from '../constants/typography';
 
 interface StarRatingProps {
@@ -21,6 +22,8 @@ export function StarRating({
   showCount,
   showValue = false,
 }: StarRatingProps) {
+  const colors = useColors();
+  
   const handlePress = (star: number) => {
     if (!readonly && onRatingChange) {
       onRatingChange(star);
@@ -49,10 +52,10 @@ export function StarRating({
       {(showValue || showCount !== undefined) && (
         <View style={styles.infoContainer}>
           {showValue && rating > 0 && (
-            <Text style={styles.ratingValue}>{rating.toFixed(1)}</Text>
+            <Text style={[styles.ratingValue, { color: colors.textPrimary }]}>{rating.toFixed(1)}</Text>
           )}
           {showCount !== undefined && (
-            <Text style={styles.countText}>
+            <Text style={[styles.countText, { color: colors.textSecondary }]}>
               ({showCount} {showCount === 1 ? 'review' : 'reviews'})
             </Text>
           )}
@@ -80,11 +83,9 @@ const styles = StyleSheet.create({
   },
   ratingValue: {
     ...textStyles.label,
-    color: colors.textPrimary,
     marginRight: spacing.xs,
   },
   countText: {
     ...textStyles.caption,
-    color: colors.textSecondary,
   },
 });

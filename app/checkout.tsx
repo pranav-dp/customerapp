@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIn
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius } from '../constants/colors';
+import { spacing, borderRadius } from '../constants/colors';
+import { useColors } from '../hooks/useColors';
 import { textStyles } from '../constants/typography';
 import { useCart, ItemAssignment } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,6 +21,7 @@ interface Friend {
 
 export default function CheckoutScreen() {
   const router = useRouter();
+  const colors = useColors();
   const { items, restaurantId, restaurantName, totalAmount, clearCart, updateAssignments, getSplitSummary } = useCart();
   const { customer, user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -196,29 +198,29 @@ export default function CheckoutScreen() {
   if (items.length === 0) return null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]} edges={['top', 'bottom']}>
+      <View style={[styles.header, { backgroundColor: colors.white, borderBottomColor: colors.gray100 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Checkout</Text>
         <View style={styles.backButton} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Your Details */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+        <View style={[styles.section, { backgroundColor: colors.white }]}>
+          <View style={[styles.sectionHeader, { borderBottomColor: colors.gray100 }]}>
             <Ionicons name="person-outline" size={20} color={colors.textPrimary} />
-            <Text style={styles.sectionTitle}>Your Details</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Your Details</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Name</Text>
-            <Text style={styles.detailValue}>{customer?.name}</Text>
+            <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Name</Text>
+            <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{customer?.name}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Phone</Text>
-            <Text style={styles.detailValue}>{customer?.phone || 'Not provided'}</Text>
+            <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Phone</Text>
+            <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{customer?.phone || 'Not provided'}</Text>
           </View>
         </View>
 
@@ -226,49 +228,49 @@ export default function CheckoutScreen() {
         {console.log('DEBUG: customer friends:', customer?.friends, 'length:', customer?.friends?.length)}
         {true && (
           <TouchableOpacity 
-            style={styles.splitToggle} 
+            style={[styles.splitToggle, { backgroundColor: colors.white }]} 
             onPress={() => setSplitEnabled(!splitEnabled)}
           >
             <View style={styles.splitToggleLeft}>
               <Ionicons name="people-outline" size={20} color={colors.primary} />
-              <Text style={styles.splitToggleText}>
+              <Text style={[styles.splitToggleText, { color: colors.textPrimary }]}>
                 Split bill with friends {customer?.friends ? `(${customer.friends.length})` : '(0)'}
               </Text>
             </View>
-            <View style={[styles.toggle, splitEnabled && styles.toggleActive]}>
-              <View style={[styles.toggleDot, splitEnabled && styles.toggleDotActive]} />
+            <View style={[styles.toggle, { backgroundColor: splitEnabled ? colors.primary : colors.gray200 }]}>
+              <View style={[styles.toggleDot, { backgroundColor: colors.white, transform: [{ translateX: splitEnabled ? 22 : 0 }] }]} />
             </View>
           </TouchableOpacity>
         )}
 
         {/* Order Items */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+        <View style={[styles.section, { backgroundColor: colors.white }]}>
+          <View style={[styles.sectionHeader, { borderBottomColor: colors.gray100 }]}>
             <Ionicons name="restaurant-outline" size={20} color={colors.textPrimary} />
-            <Text style={styles.sectionTitle}>{restaurantName}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{restaurantName}</Text>
           </View>
           {items.map(item => (
             <View key={item.id} style={styles.orderItemContainer}>
               <View style={styles.orderItem}>
-                <View style={[styles.vegIndicator, item.isVeg ? styles.vegVeg : styles.vegNonVeg]}>
-                  <View style={[styles.vegDot, item.isVeg ? styles.dotVeg : styles.dotNonVeg]} />
+                <View style={[styles.vegIndicator, { borderColor: item.isVeg ? colors.veg : colors.nonVeg }]}>
+                  <View style={[styles.vegDot, { backgroundColor: item.isVeg ? colors.veg : colors.nonVeg }]} />
                 </View>
-                <Text style={styles.orderItemName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.orderItemQty}>x{item.quantity}</Text>
-                <Text style={styles.orderItemPrice}>{formatPrice(item.price * item.quantity)}</Text>
+                <Text style={[styles.orderItemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
+                <Text style={[styles.orderItemQty, { color: colors.textSecondary }]}>x{item.quantity}</Text>
+                <Text style={[styles.orderItemPrice, { color: colors.textPrimary }]}>{formatPrice(item.price * item.quantity)}</Text>
               </View>
               
               {splitEnabled && (
                 <TouchableOpacity 
-                  style={styles.assignButton}
+                  style={[styles.assignButton, { backgroundColor: colors.gray50 }]}
                   onPress={() => openSplitModal(item.id)}
                 >
                   {item.assignments && item.assignments.length > 0 ? (
-                    <Text style={styles.assignedText}>
+                    <Text style={[styles.assignedText, { color: colors.primary }]}>
                       {item.assignments.map(a => `${a.friendName} (${a.quantity})`).join(', ')}
                     </Text>
                   ) : (
-                    <Text style={styles.assignText}>Tap to assign</Text>
+                    <Text style={[styles.assignText, { color: colors.textTertiary }]}>Tap to assign</Text>
                   )}
                   <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                 </TouchableOpacity>
@@ -279,50 +281,50 @@ export default function CheckoutScreen() {
 
         {/* Bill Split Summary */}
         {splitEnabled && Object.keys(splitSummary).length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
+          <View style={[styles.section, { backgroundColor: colors.white }]}>
+            <View style={[styles.sectionHeader, { borderBottomColor: colors.gray100 }]}>
               <Ionicons name="receipt-outline" size={20} color={colors.textPrimary} />
-              <Text style={styles.sectionTitle}>Bill Split</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Bill Split</Text>
             </View>
             {Object.entries(splitSummary).map(([name, amount]) => (
-              <View key={name} style={styles.splitRow}>
-                <Text style={styles.splitName}>{name}</Text>
-                <Text style={styles.splitAmount}>{formatPrice(amount)}</Text>
+              <View key={name} style={[styles.splitRow, { borderBottomColor: colors.gray100 }]}>
+                <Text style={[styles.splitName, { color: colors.textPrimary }]}>{name}</Text>
+                <Text style={[styles.splitAmount, { color: colors.success }]}>{formatPrice(amount)}</Text>
               </View>
             ))}
           </View>
         )}
 
         {/* Payment */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+        <View style={[styles.section, { backgroundColor: colors.white }]}>
+          <View style={[styles.sectionHeader, { borderBottomColor: colors.gray100 }]}>
             <Ionicons name="card-outline" size={20} color={colors.textPrimary} />
-            <Text style={styles.sectionTitle}>Payment</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Payment</Text>
           </View>
-          <View style={styles.paymentOption}>
-            <View style={styles.paymentIcon}>
+          <View style={[styles.paymentOption, { backgroundColor: colors.gray50 }]}>
+            <View style={[styles.paymentIcon, { backgroundColor: colors.white }]}>
               <Ionicons name="phone-portrait" size={24} color={colors.primary} />
             </View>
             <View style={styles.paymentInfo}>
-              <Text style={styles.paymentName}>UPI / Google Pay</Text>
-              <Text style={styles.paymentDesc}>Pay using any UPI app</Text>
+              <Text style={[styles.paymentName, { color: colors.textPrimary }]}>UPI / Google Pay</Text>
+              <Text style={[styles.paymentDesc, { color: colors.textSecondary }]}>Pay using any UPI app</Text>
             </View>
-            <View style={styles.radioSelected}>
-              <View style={styles.radioDot} />
+            <View style={[styles.radioSelected, { borderColor: colors.success }]}>
+              <View style={[styles.radioDot, { backgroundColor: colors.success }]} />
             </View>
           </View>
         </View>
 
         {/* Total */}
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.white }]}>
           <View style={[styles.billRow, styles.billTotal]}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{formatPrice(totalAmount)}</Text>
+            <Text style={[styles.totalLabel, { color: colors.textPrimary }]}>Total</Text>
+            <Text style={[styles.totalValue, { color: colors.success }]}>{formatPrice(totalAmount)}</Text>
           </View>
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { backgroundColor: colors.white, borderTopColor: colors.gray100 }]}>
         <Button 
           title={loading ? 'Placing Order...' : `Pay ${formatPrice(totalAmount)}`}
           onPress={handlePlaceOrder}
@@ -332,23 +334,23 @@ export default function CheckoutScreen() {
       </View>
 
       {loading && (
-        <View style={styles.loadingOverlay}>
+        <View style={[styles.loadingOverlay, { backgroundColor: colors.overlay }]}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Placing your order...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Placing your order...</Text>
         </View>
       )}
 
       {/* Assignment Modal */}
       <Modal visible={showSplitModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: colors.white }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Assign: {selectedItem?.name}</Text>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Assign: {selectedItem?.name}</Text>
               <TouchableOpacity onPress={() => setShowSplitModal(false)}>
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSubtitle}>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
               Quantity: {selectedItem?.quantity} • Tap to assign
             </Text>
             
@@ -358,16 +360,16 @@ export default function CheckoutScreen() {
                 return (
                   <TouchableOpacity
                     key={person.id}
-                    style={[styles.personRow, count > 0 && styles.personRowActive]}
+                    style={[styles.personRow, { backgroundColor: count > 0 ? colors.primary + '15' : colors.gray50, borderWidth: count > 0 ? 1 : 0, borderColor: colors.primary }]}
                     onPress={() => handleAssign(person.id, person.name)}
                   >
-                    <View style={styles.personAvatar}>
-                      <Text style={styles.personAvatarText}>{person.name.charAt(0)}</Text>
+                    <View style={[styles.personAvatar, { backgroundColor: colors.primary }]}>
+                      <Text style={[styles.personAvatarText, { color: colors.white }]}>{person.name.charAt(0)}</Text>
                     </View>
-                    <Text style={styles.personName}>{person.name}</Text>
+                    <Text style={[styles.personName, { color: colors.textPrimary }]}>{person.name}</Text>
                     {count > 0 && (
-                      <View style={styles.countBadge}>
-                        <Text style={styles.countText}>{count}</Text>
+                      <View style={[styles.countBadge, { backgroundColor: colors.primary }]}>
+                        <Text style={[styles.countText, { color: colors.white }]}>{count}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -384,113 +386,98 @@ export default function CheckoutScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.backgroundSecondary },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
   backButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { ...textStyles.h3, color: colors.textPrimary },
-  section: { backgroundColor: colors.white, marginTop: spacing.sm, padding: spacing.lg },
+  headerTitle: { ...textStyles.h3 },
+  section: { marginTop: spacing.sm, padding: spacing.lg },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.md,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
-  sectionTitle: { ...textStyles.h4, color: colors.textPrimary, marginLeft: spacing.sm },
+  sectionTitle: { ...textStyles.h4, marginLeft: spacing.sm },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
-  detailLabel: { ...textStyles.body, color: colors.textSecondary },
-  detailValue: { ...textStyles.label, color: colors.textPrimary },
+  detailLabel: { ...textStyles.body },
+  detailValue: { ...textStyles.label },
   splitToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.white,
     marginTop: spacing.sm,
     padding: spacing.lg,
   },
   splitToggleLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  splitToggleText: { ...textStyles.label, color: colors.textPrimary },
+  splitToggleText: { ...textStyles.label },
   toggle: {
     width: 50,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.gray200,
     padding: 2,
   },
-  toggleActive: { backgroundColor: colors.primary },
   toggleDot: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.white,
   },
-  toggleDotActive: { transform: [{ translateX: 22 }] },
   orderItemContainer: { marginBottom: spacing.sm },
   orderItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm },
   vegIndicator: { width: 14, height: 14, borderWidth: 1.5, borderRadius: 2, alignItems: 'center', justifyContent: 'center' },
-  vegVeg: { borderColor: colors.veg },
-  vegNonVeg: { borderColor: colors.nonVeg },
   vegDot: { width: 7, height: 7, borderRadius: 3.5 },
-  dotVeg: { backgroundColor: colors.veg },
-  dotNonVeg: { backgroundColor: colors.nonVeg },
-  orderItemName: { ...textStyles.body, color: colors.textPrimary, flex: 1, marginLeft: spacing.sm },
-  orderItemQty: { ...textStyles.body, color: colors.textSecondary, marginHorizontal: spacing.md },
-  orderItemPrice: { ...textStyles.label, color: colors.textPrimary },
+  orderItemName: { ...textStyles.body, flex: 1, marginLeft: spacing.sm },
+  orderItemQty: { ...textStyles.body, marginHorizontal: spacing.md },
+  orderItemPrice: { ...textStyles.label },
   assignButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.gray50,
     padding: spacing.sm,
     borderRadius: borderRadius.md,
     marginTop: spacing.xs,
   },
-  assignText: { ...textStyles.caption, color: colors.textTertiary },
-  assignedText: { ...textStyles.caption, color: colors.primary, flex: 1 },
+  assignText: { ...textStyles.caption },
+  assignedText: { ...textStyles.caption, flex: 1 },
   splitRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
-  splitName: { ...textStyles.body, color: colors.textPrimary },
-  splitAmount: { ...textStyles.label, color: colors.success },
+  splitName: { ...textStyles.body },
+  splitAmount: { ...textStyles.label },
   paymentOption: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
-    backgroundColor: colors.gray50,
     borderRadius: borderRadius.lg,
   },
-  paymentIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  paymentIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   paymentInfo: { flex: 1, marginLeft: spacing.md },
-  paymentName: { ...textStyles.label, color: colors.textPrimary },
-  paymentDesc: { ...textStyles.caption, color: colors.textSecondary },
-  radioSelected: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.success, alignItems: 'center', justifyContent: 'center' },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.success },
+  paymentName: { ...textStyles.label },
+  paymentDesc: { ...textStyles.caption },
+  radioSelected: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  radioDot: { width: 10, height: 10, borderRadius: 5 },
   billRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
   billTotal: { borderTopWidth: 0, paddingTop: 0, marginTop: 0 },
-  totalLabel: { ...textStyles.h4, color: colors.textPrimary },
-  totalValue: { ...textStyles.h3, color: colors.success },
-  footer: { padding: spacing.lg, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.gray100 },
-  loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center' },
-  loadingText: { ...textStyles.body, color: colors.textSecondary, marginTop: spacing.md },
+  totalLabel: { ...textStyles.h4 },
+  totalValue: { ...textStyles.h3 },
+  footer: { padding: spacing.lg, borderTopWidth: 1 },
+  loadingOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { ...textStyles.body, marginTop: spacing.md },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.lg, maxHeight: '70%' },
+  modalContent: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.lg, maxHeight: '70%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  modalTitle: { ...textStyles.h4, color: colors.textPrimary },
-  modalSubtitle: { ...textStyles.caption, color: colors.textSecondary, marginBottom: spacing.lg },
+  modalTitle: { ...textStyles.h4 },
+  modalSubtitle: { ...textStyles.caption, marginBottom: spacing.lg },
   peopleList: { marginBottom: spacing.lg },
   personRow: {
     flexDirection: 'row',
@@ -498,12 +485,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.md,
     marginBottom: spacing.sm,
-    backgroundColor: colors.gray50,
   },
-  personRowActive: { backgroundColor: colors.primary + '15', borderWidth: 1, borderColor: colors.primary },
-  personAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  personAvatarText: { ...textStyles.label, color: colors.white },
-  personName: { ...textStyles.body, color: colors.textPrimary, flex: 1, marginLeft: spacing.md },
-  countBadge: { backgroundColor: colors.primary, paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: 10 },
-  countText: { ...textStyles.caption, color: colors.white, fontWeight: '600' },
+  personAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  personAvatarText: { ...textStyles.label },
+  personName: { ...textStyles.body, flex: 1, marginLeft: spacing.md },
+  countBadge: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: 10 },
+  countText: { ...textStyles.caption, fontWeight: '600' },
 });

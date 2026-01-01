@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius } from '../constants/colors';
+import { spacing, borderRadius } from '../constants/colors';
+import { useColors } from '../hooks/useColors';
 import { textStyles } from '../constants/typography';
 import { StarRating } from './StarRating';
 import { Review } from '../services/reviews';
@@ -16,6 +17,7 @@ interface ReviewCardProps {
 }
 
 export function ReviewCard({ review, onDelete, showDeleteButton = false, showRestaurantName = false }: ReviewCardProps) {
+  const colors = useColors();
   const date = review.createdAt instanceof Date 
     ? review.createdAt 
     : (review.createdAt as any)?.toDate?.() || new Date();
@@ -24,42 +26,42 @@ export function ReviewCard({ review, onDelete, showDeleteButton = false, showRes
   const itemsSummary = review.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.white, shadowColor: colors.black }]}>
       {/* Restaurant Name Header - if showing */}
       {showRestaurantName && (
-        <View style={styles.restaurantHeader}>
-          <View style={styles.restaurantIcon}>
+        <View style={[styles.restaurantHeader, { borderBottomColor: colors.gray100 }]}>
+          <View style={[styles.restaurantIcon, { backgroundColor: colors.primaryLight }]}>
             <Ionicons name="restaurant" size={16} color={colors.primary} />
           </View>
-          <Text style={styles.restaurantName}>{review.restaurantName}</Text>
+          <Text style={[styles.restaurantName, { color: colors.textPrimary }]}>{review.restaurantName}</Text>
         </View>
       )}
 
       {/* User Info & Rating Row */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.avatarText, { color: colors.black }]}>
               {review.customerName?.charAt(0).toUpperCase() || 'U'}
             </Text>
           </View>
           <View style={styles.userDetails}>
-            <Text style={styles.customerName}>{review.customerName}</Text>
-            <Text style={styles.username}>@{review.username}</Text>
+            <Text style={[styles.customerName, { color: colors.textPrimary }]}>{review.customerName}</Text>
+            <Text style={[styles.username, { color: colors.textTertiary }]}>@{review.username}</Text>
           </View>
         </View>
         <View style={styles.ratingContainer}>
-          <View style={styles.ratingBadge}>
+          <View style={[styles.ratingBadge, { backgroundColor: colors.warningLight || '#FFF8E1' }]}>
             <Ionicons name="star" size={14} color={colors.warning} />
-            <Text style={styles.ratingText}>{review.rating}</Text>
+            <Text style={[styles.ratingText, { color: colors.warning }]}>{review.rating}</Text>
           </View>
-          <Text style={styles.timeAgo}>{timeAgo}</Text>
+          <Text style={[styles.timeAgo, { color: colors.textTertiary }]}>{timeAgo}</Text>
         </View>
       </View>
 
       {/* Review Description */}
       {review.description ? (
-        <Text style={styles.description}>{review.description}</Text>
+        <Text style={[styles.description, { color: colors.textPrimary }]}>{review.description}</Text>
       ) : (
         <View style={styles.noDescriptionContainer}>
           <StarRating rating={review.rating} size={18} readonly />
@@ -76,19 +78,19 @@ export function ReviewCard({ review, onDelete, showDeleteButton = false, showRes
       )}
 
       {/* Order Info Footer */}
-      <View style={styles.footer}>
-        <View style={styles.orderBadge}>
+      <View style={[styles.footer, { backgroundColor: colors.gray50 }]}>
+        <View style={[styles.orderBadge, { backgroundColor: colors.white }]}>
           <Ionicons name="receipt-outline" size={12} color={colors.textTertiary} />
-          <Text style={styles.orderNumber}>#{review.orderNumber}</Text>
+          <Text style={[styles.orderNumber, { color: colors.textSecondary }]}>#{review.orderNumber}</Text>
         </View>
-        <Text style={styles.orderItems} numberOfLines={1}>{itemsSummary}</Text>
+        <Text style={[styles.orderItems, { color: colors.textTertiary }]} numberOfLines={1}>{itemsSummary}</Text>
       </View>
 
       {/* Delete Button */}
       {showDeleteButton && onDelete && (
-        <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
+        <TouchableOpacity onPress={onDelete} style={[styles.deleteButton, { borderTopColor: colors.gray100 }]}>
           <Ionicons name="trash-outline" size={16} color={colors.error} />
-          <Text style={styles.deleteText}>Delete</Text>
+          <Text style={[styles.deleteText, { color: colors.error }]}>Delete</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -112,11 +114,9 @@ function getTimeAgo(date: Date): string {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.white,
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
     marginBottom: spacing.md,
-    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -128,20 +128,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
   restaurantIcon: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
   },
   restaurantName: {
     ...textStyles.label,
-    color: colors.textPrimary,
     flex: 1,
   },
   header: {
@@ -159,13 +156,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     ...textStyles.label,
-    color: colors.black,
     fontSize: 16,
   },
   userDetails: {
@@ -174,11 +169,9 @@ const styles = StyleSheet.create({
   },
   customerName: {
     ...textStyles.label,
-    color: colors.textPrimary,
   },
   username: {
     ...textStyles.caption,
-    color: colors.textTertiary,
   },
   ratingContainer: {
     alignItems: 'flex-end',
@@ -186,7 +179,6 @@ const styles = StyleSheet.create({
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.warningLight || '#FFF8E1',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
@@ -194,17 +186,14 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     ...textStyles.label,
-    color: colors.warning,
     fontSize: 14,
   },
   timeAgo: {
     ...textStyles.caption,
-    color: colors.textTertiary,
     marginTop: spacing.xs,
   },
   description: {
     ...textStyles.body,
-    color: colors.textPrimary,
     lineHeight: 22,
     marginBottom: spacing.md,
   },
@@ -220,14 +209,12 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray50,
     padding: spacing.sm,
     borderRadius: borderRadius.md,
   },
   orderBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
@@ -236,12 +223,10 @@ const styles = StyleSheet.create({
   },
   orderNumber: {
     ...textStyles.caption,
-    color: colors.textSecondary,
     fontWeight: '600',
   },
   orderItems: {
     ...textStyles.caption,
-    color: colors.textTertiary,
     flex: 1,
   },
   deleteButton: {
@@ -251,11 +236,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.gray100,
     gap: spacing.xs,
   },
   deleteText: {
     ...textStyles.labelSmall,
-    color: colors.error,
   },
 });

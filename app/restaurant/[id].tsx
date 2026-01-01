@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, shadows } from '../../constants/colors';
+import { spacing, borderRadius, shadows } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
+import { useColors } from '../../hooks/useColors';
 import { getRestaurant } from '../../services/firestore';
 import { getRestaurantStatus, formatPrice, OperatingHours } from '../../utils/restaurant';
 import { MenuItemCard, CategoryTabs, ClosedBanner, MenuItem } from '../../components/menu';
@@ -30,6 +31,7 @@ interface Restaurant {
 export default function RestaurantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const colors = useColors();
   const { addItem, restaurantId: cartRestaurantId, totalItems } = useCart();
   const { customer, refreshCustomer } = useAuth();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
@@ -156,9 +158,9 @@ export default function RestaurantDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.white }]} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.gray100 }]}>
             <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
@@ -174,15 +176,15 @@ export default function RestaurantDetailScreen() {
 
   if (!restaurant) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.white }]} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.gray100 }]}>
             <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <View style={styles.errorContainer}>
           <Ionicons name="sad-outline" size={48} color={colors.gray300} />
-          <Text style={styles.errorText}>Restaurant not found</Text>
+          <Text style={[styles.errorText, { color: colors.textSecondary }]}>Restaurant not found</Text>
         </View>
       </SafeAreaView>
     );
@@ -192,13 +194,13 @@ export default function RestaurantDetailScreen() {
   const totalCount = restaurant.menu?.length || 0;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.white }]} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.gray100 }]}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleToggleFavorite} style={styles.searchButton}>
+        <TouchableOpacity onPress={handleToggleFavorite} style={[styles.searchButton, { backgroundColor: colors.gray100 }]}>
           <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={22} color={isFavorite ? colors.error : colors.textPrimary} />
         </TouchableOpacity>
       </View>
@@ -206,20 +208,20 @@ export default function RestaurantDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[2]}>
         {/* Restaurant Info */}
         <View style={styles.restaurantInfo}>
-          <Text style={styles.restaurantName}>{restaurant.name}</Text>
+          <Text style={[styles.restaurantName, { color: colors.textPrimary }]}>{restaurant.name}</Text>
           {restaurant.description && (
-            <Text style={styles.restaurantDescription}>{restaurant.description}</Text>
+            <Text style={[styles.restaurantDescription, { color: colors.textSecondary }]}>{restaurant.description}</Text>
           )}
           
           {/* Reviews Section - Tappable */}
-          <TouchableOpacity style={styles.reviewsSection} onPress={handleViewReviews} activeOpacity={0.7}>
+          <TouchableOpacity style={[styles.reviewsSection, { backgroundColor: colors.gray50 }]} onPress={handleViewReviews} activeOpacity={0.7}>
             <View style={styles.reviewsLeft}>
               <StarRating 
                 rating={Math.round(restaurant.rating || 0)} 
                 size={16} 
                 readonly 
               />
-              <Text style={styles.reviewsText}>
+              <Text style={[styles.reviewsText, { color: colors.textSecondary }]}>
                 {(restaurant.rating || 0).toFixed(1)} ({restaurant.reviewCount || 0} reviews)
               </Text>
             </View>
@@ -228,23 +230,23 @@ export default function RestaurantDetailScreen() {
           
           {/* Status Badge */}
           <View style={styles.statusRow}>
-            <View style={[styles.statusBadge, status.isOpen ? styles.statusOpen : styles.statusClosed]}>
-              <View style={[styles.statusDot, status.isOpen ? styles.dotOpen : styles.dotClosed]} />
-              <Text style={[styles.statusText, status.isOpen ? styles.textOpen : styles.textClosed]}>
+            <View style={[styles.statusBadge, { backgroundColor: status.isOpen ? colors.successLight : colors.errorLight }]}>
+              <View style={[styles.statusDot, { backgroundColor: status.isOpen ? colors.success : colors.error }]} />
+              <Text style={[styles.statusText, { color: status.isOpen ? colors.success : colors.error }]}>
                 {status.isOpen ? 'Open' : 'Closed'}
               </Text>
             </View>
-            <Text style={styles.statusMessage}>{status.message}</Text>
+            <Text style={[styles.statusMessage, { color: colors.textSecondary }]}>{status.message}</Text>
           </View>
 
           {/* Menu Stats */}
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Ionicons name="restaurant-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.statText}>{availableCount} items available</Text>
+              <Text style={[styles.statText, { color: colors.textSecondary }]}>{availableCount} items available</Text>
             </View>
             {totalCount > availableCount && (
-              <Text style={styles.unavailableText}>
+              <Text style={[styles.unavailableText, { color: colors.textTertiary }]}>
                 {totalCount - availableCount} unavailable
               </Text>
             )}
@@ -255,26 +257,34 @@ export default function RestaurantDetailScreen() {
         <ClosedBanner status={status} />
 
         {/* Filters & Categories - Sticky */}
-        <View style={styles.filtersContainer}>
+        <View style={[styles.filtersContainer, { backgroundColor: colors.white, borderBottomColor: colors.gray100 }]}>
           {/* Veg/Non-veg Filter */}
           <View style={styles.vegFilters}>
             <TouchableOpacity
-              style={[styles.vegFilterButton, filter === 'veg' && styles.vegFilterActive]}
+              style={[
+                styles.vegFilterButton, 
+                { borderColor: colors.gray200, backgroundColor: colors.white },
+                filter === 'veg' && { borderColor: colors.veg, backgroundColor: colors.successLight }
+              ]}
               onPress={() => setFilter(filter === 'veg' ? 'all' : 'veg')}
             >
-              <View style={[styles.vegIndicator, styles.vegIndicatorVeg]}>
-                <View style={[styles.vegDot, styles.vegDotVeg]} />
+              <View style={[styles.vegIndicator, { borderColor: colors.veg }]}>
+                <View style={[styles.vegDot, { backgroundColor: colors.veg }]} />
               </View>
-              <Text style={[styles.vegFilterText, filter === 'veg' && styles.vegFilterTextActive]}>Veg</Text>
+              <Text style={[styles.vegFilterText, { color: filter === 'veg' ? colors.veg : colors.textSecondary }]}>Veg</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.vegFilterButton, filter === 'nonveg' && styles.nonvegFilterActive]}
+              style={[
+                styles.vegFilterButton, 
+                { borderColor: colors.gray200, backgroundColor: colors.white },
+                filter === 'nonveg' && { borderColor: colors.nonVeg, backgroundColor: colors.errorLight }
+              ]}
               onPress={() => setFilter(filter === 'nonveg' ? 'all' : 'nonveg')}
             >
-              <View style={[styles.vegIndicator, styles.vegIndicatorNonVeg]}>
-                <View style={[styles.vegDot, styles.vegDotNonVeg]} />
+              <View style={[styles.vegIndicator, { borderColor: colors.nonVeg }]}>
+                <View style={[styles.vegDot, { backgroundColor: colors.nonVeg }]} />
               </View>
-              <Text style={[styles.vegFilterText, filter === 'nonveg' && styles.nonvegFilterTextActive]}>Non-veg</Text>
+              <Text style={[styles.vegFilterText, { color: filter === 'nonveg' ? colors.nonVeg : colors.textSecondary }]}>Non-veg</Text>
             </TouchableOpacity>
           </View>
 
@@ -292,10 +302,10 @@ export default function RestaurantDetailScreen() {
           {filteredMenu.length === 0 ? (
             <View style={styles.emptyMenu}>
               <Ionicons name="restaurant-outline" size={48} color={colors.gray300} />
-              <Text style={styles.emptyText}>No items found</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No items found</Text>
               {filter !== 'all' && (
                 <TouchableOpacity onPress={() => setFilter('all')}>
-                  <Text style={styles.clearFilterText}>Clear filters</Text>
+                  <Text style={[styles.clearFilterText, { color: colors.primary }]}>Clear filters</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -322,7 +332,6 @@ export default function RestaurantDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
   },
   header: {
     flexDirection: 'row',
@@ -335,7 +344,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -343,7 +351,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -357,7 +364,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...textStyles.body,
-    color: colors.textSecondary,
   },
   restaurantInfo: {
     paddingHorizontal: spacing.xl,
@@ -365,19 +371,16 @@ const styles = StyleSheet.create({
   },
   restaurantName: {
     ...textStyles.displayMedium,
-    color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
   restaurantDescription: {
     ...textStyles.body,
-    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   reviewsSection: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.gray50,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
@@ -389,7 +392,6 @@ const styles = StyleSheet.create({
   },
   reviewsText: {
     ...textStyles.bodySmall,
-    color: colors.textSecondary,
     marginLeft: spacing.sm,
   },
   statusRow: {
@@ -405,36 +407,17 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     marginRight: spacing.sm,
   },
-  statusOpen: {
-    backgroundColor: colors.successLight,
-  },
-  statusClosed: {
-    backgroundColor: colors.errorLight,
-  },
   statusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     marginRight: spacing.xs,
   },
-  dotOpen: {
-    backgroundColor: colors.success,
-  },
-  dotClosed: {
-    backgroundColor: colors.error,
-  },
   statusText: {
     ...textStyles.labelSmall,
   },
-  textOpen: {
-    color: colors.success,
-  },
-  textClosed: {
-    color: colors.error,
-  },
   statusMessage: {
     ...textStyles.bodySmall,
-    color: colors.textSecondary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -446,18 +429,14 @@ const styles = StyleSheet.create({
   },
   statText: {
     ...textStyles.bodySmall,
-    color: colors.textSecondary,
     marginLeft: spacing.xs,
   },
   unavailableText: {
     ...textStyles.bodySmall,
-    color: colors.textTertiary,
     marginLeft: spacing.md,
   },
   filtersContainer: {
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
   vegFilters: {
     flexDirection: 'row',
@@ -472,16 +451,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.gray200,
-    backgroundColor: colors.white,
-  },
-  vegFilterActive: {
-    borderColor: colors.veg,
-    backgroundColor: colors.successLight,
-  },
-  nonvegFilterActive: {
-    borderColor: colors.nonVeg,
-    backgroundColor: colors.errorLight,
   },
   vegIndicator: {
     width: 14,
@@ -492,32 +461,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacing.xs,
   },
-  vegIndicatorVeg: {
-    borderColor: colors.veg,
-  },
-  vegIndicatorNonVeg: {
-    borderColor: colors.nonVeg,
-  },
   vegDot: {
     width: 7,
     height: 7,
     borderRadius: 3.5,
   },
-  vegDotVeg: {
-    backgroundColor: colors.veg,
-  },
-  vegDotNonVeg: {
-    backgroundColor: colors.nonVeg,
-  },
   vegFilterText: {
     ...textStyles.labelSmall,
-    color: colors.textSecondary,
-  },
-  vegFilterTextActive: {
-    color: colors.veg,
-  },
-  nonvegFilterTextActive: {
-    color: colors.nonVeg,
   },
   menuContainer: {
     paddingHorizontal: spacing.xl,
@@ -529,11 +479,9 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...textStyles.body,
-    color: colors.textSecondary,
   },
   clearFilterText: {
     ...textStyles.label,
-    color: colors.primary,
     marginTop: spacing.md,
   },
 });

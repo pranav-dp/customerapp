@@ -5,7 +5,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { colors, spacing, borderRadius } from '../constants/colors';
+import { spacing, borderRadius } from '../constants/colors';
+import { useColors } from '../hooks/useColors';
 import { textStyles } from '../constants/typography';
 import { useAuth } from '../contexts/AuthContext';
 import { searchUsersByUsername } from '../services/firestore';
@@ -18,6 +19,7 @@ interface UserResult {
 
 export default function FriendsScreen() {
   const router = useRouter();
+  const colors = useColors();
   const { customer, refreshCustomer } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserResult[]>([]);
@@ -85,23 +87,23 @@ export default function FriendsScreen() {
   const totalOwed = Object.values(owes).reduce((sum, amt) => sum + amt, 0);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <View style={[styles.header, { backgroundColor: colors.white, borderBottomColor: colors.gray100 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Friends</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Friends</Text>
         <View style={styles.backBtn} />
       </View>
 
       {/* Money Owed Banner */}
       {totalOwed > 0 && (
-        <TouchableOpacity style={styles.owedBanner} onPress={() => router.push('/money-owed')}>
+        <TouchableOpacity style={[styles.owedBanner, { backgroundColor: colors.warning + '15', borderColor: colors.warning + '30' }]} onPress={() => router.push('/money-owed')}>
           <View style={styles.owedLeft}>
             <Ionicons name="wallet-outline" size={24} color={colors.warning} />
             <View style={styles.owedInfo}>
-              <Text style={styles.owedTitle}>You owe</Text>
-              <Text style={styles.owedAmount}>₹{totalOwed}</Text>
+              <Text style={[styles.owedTitle, { color: colors.textSecondary }]}>You owe</Text>
+              <Text style={[styles.owedAmount, { color: colors.warning }]}>₹{totalOwed}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
@@ -110,10 +112,10 @@ export default function FriendsScreen() {
 
       {/* Search */}
       <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
+        <View style={[styles.searchBar, { backgroundColor: colors.white, borderColor: colors.gray200 }]}>
           <Ionicons name="search" size={20} color={colors.gray500} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.textPrimary }]}
             placeholder="Search by username..."
             placeholderTextColor={colors.gray500}
             value={searchQuery}
@@ -126,19 +128,19 @@ export default function FriendsScreen() {
 
         {/* Search Results Dropdown */}
         {searchResults.length > 0 && (
-          <View style={styles.dropdown}>
+          <View style={[styles.dropdown, { backgroundColor: colors.white, borderColor: colors.gray200 }]}>
             {searchResults.map(user => (
               <TouchableOpacity
                 key={user.id}
-                style={styles.dropdownItem}
+                style={[styles.dropdownItem, { borderBottomColor: colors.gray100 }]}
                 onPress={() => handleAddFriend(user)}
               >
-                <View style={styles.userAvatar}>
-                  <Text style={styles.avatarText}>{user.name.charAt(0)}</Text>
+                <View style={[styles.userAvatar, { backgroundColor: colors.primary }]}>
+                  <Text style={[styles.avatarText, { color: colors.white }]}>{user.name.charAt(0)}</Text>
                 </View>
                 <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{user.name}</Text>
-                  <Text style={styles.userUsername}>@{user.username}</Text>
+                  <Text style={[styles.userName, { color: colors.textPrimary }]}>{user.name}</Text>
+                  <Text style={[styles.userUsername, { color: colors.textSecondary }]}>@{user.username}</Text>
                 </View>
                 <Ionicons name="add-circle" size={24} color={colors.success} />
               </TouchableOpacity>
@@ -156,18 +158,18 @@ export default function FriendsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="people-outline" size={48} color={colors.gray300} />
-            <Text style={styles.emptyText}>No friends added yet</Text>
-            <Text style={styles.emptySubtext}>Search by username to add friends</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No friends added yet</Text>
+            <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>Search by username to add friends</Text>
           </View>
         }
         renderItem={({ item }) => (
-          <View style={styles.friendCard}>
-            <View style={styles.friendAvatar}>
-              <Text style={styles.friendAvatarText}>{item.name.charAt(0)}</Text>
+          <View style={[styles.friendCard, { backgroundColor: colors.white }]}>
+            <View style={[styles.friendAvatar, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.friendAvatarText, { color: colors.white }]}>{item.name.charAt(0)}</Text>
             </View>
             <View style={styles.friendInfo}>
-              <Text style={styles.friendName}>{item.name}</Text>
-              <Text style={styles.friendUsername}>@{item.username}</Text>
+              <Text style={[styles.friendName, { color: colors.textPrimary }]}>{item.name}</Text>
+              <Text style={[styles.friendUsername, { color: colors.textSecondary }]}>@{item.username}</Text>
             </View>
             <TouchableOpacity onPress={() => handleRemoveFriend(item)} style={styles.removeBtn}>
               <Ionicons name="close-circle" size={24} color={colors.gray400} />
@@ -180,62 +182,62 @@ export default function FriendsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.gray100,
+    borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  title: { ...textStyles.h3, color: colors.textPrimary },
+  title: { ...textStyles.h3 },
   owedBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.warning + '15', margin: spacing.lg, padding: spacing.lg,
-    borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.warning + '30',
+    margin: spacing.lg, padding: spacing.lg,
+    borderRadius: borderRadius.lg, borderWidth: 1,
   },
   owedLeft: { flexDirection: 'row', alignItems: 'center' },
   owedInfo: { marginLeft: spacing.md },
-  owedTitle: { ...textStyles.caption, color: colors.textSecondary },
-  owedAmount: { ...textStyles.h3, color: colors.warning },
+  owedTitle: { ...textStyles.caption },
+  owedAmount: { ...textStyles.h3 },
   searchContainer: { paddingHorizontal: spacing.lg, marginBottom: spacing.md, zIndex: 10 },
   searchBar: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white,
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.gray200,
+    borderRadius: borderRadius.lg, borderWidth: 1,
   },
-  searchInput: { flex: 1, ...textStyles.body, color: colors.textPrimary, marginLeft: spacing.sm, paddingVertical: spacing.xs },
+  searchInput: { flex: 1, ...textStyles.body, marginLeft: spacing.sm, paddingVertical: spacing.xs },
   dropdown: {
     position: 'absolute', top: 52, left: spacing.lg, right: spacing.lg,
-    backgroundColor: colors.white, borderRadius: borderRadius.lg,
-    borderWidth: 1, borderColor: colors.gray200, ...({ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }),
+    borderRadius: borderRadius.lg,
+    borderWidth: 1, ...({ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }),
   },
   dropdownItem: {
     flexDirection: 'row', alignItems: 'center', padding: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.gray100,
+    borderBottomWidth: 1,
   },
   userAvatar: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary,
+    width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarText: { ...textStyles.label, color: colors.white },
+  avatarText: { ...textStyles.label },
   userInfo: { flex: 1, marginLeft: spacing.md },
-  userName: { ...textStyles.label, color: colors.textPrimary },
-  userUsername: { ...textStyles.caption, color: colors.textSecondary },
+  userName: { ...textStyles.label },
+  userUsername: { ...textStyles.caption },
   list: { padding: spacing.lg, paddingTop: 0 },
   friendCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white,
+    flexDirection: 'row', alignItems: 'center',
     padding: spacing.md, borderRadius: borderRadius.lg, marginBottom: spacing.sm,
   },
   friendAvatar: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary,
+    width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
   },
-  friendAvatarText: { ...textStyles.h4, color: colors.white },
+  friendAvatarText: { ...textStyles.h4 },
   friendInfo: { flex: 1, marginLeft: spacing.md },
-  friendName: { ...textStyles.label, color: colors.textPrimary },
-  friendUsername: { ...textStyles.caption, color: colors.textSecondary },
+  friendName: { ...textStyles.label },
+  friendUsername: { ...textStyles.caption },
   removeBtn: { padding: spacing.xs },
   empty: { alignItems: 'center', paddingVertical: spacing.xxxl },
-  emptyText: { ...textStyles.h4, color: colors.textSecondary, marginTop: spacing.md },
-  emptySubtext: { ...textStyles.body, color: colors.textTertiary, marginTop: spacing.xs },
+  emptyText: { ...textStyles.h4, marginTop: spacing.md },
+  emptySubtext: { ...textStyles.body, marginTop: spacing.xs },
 });

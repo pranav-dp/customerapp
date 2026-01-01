@@ -1,12 +1,14 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
-import { colors } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
+import { useColors } from '../../hooks/useColors';
 
 const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 85 : 65;
 
 export default function TabLayout() {
+  const colors = useColors();
+  
   return (
     <Tabs
       screenOptions={{

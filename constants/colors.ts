@@ -1,4 +1,5 @@
-export const colors = {
+// Light theme colors
+export const lightColors = {
   // Primary - Warm yellow/orange like McDonald's
   primary: '#FFBC0D',
   primaryDark: '#E5A800',
@@ -48,7 +49,74 @@ export const colors = {
   veg: '#27AE60',
   nonVeg: '#E31837',
   egg: '#F39C12',
+
+  // Card/Container
+  card: '#FFFFFF',
+  border: '#EEEEEE',
 };
+
+// Dark theme colors
+export const darkColors = {
+  // Primary - Keep brand colors consistent
+  primary: '#FFBC0D',
+  primaryDark: '#E5A800',
+  primaryLight: '#3D3200',
+
+  // Accent - Red for CTAs
+  accent: '#E31837',
+  accentLight: '#3D1520',
+
+  // Success/Status
+  success: '#27AE60',
+  successLight: '#1A3D2A',
+  warning: '#F39C12',
+  warningLight: '#3D2E10',
+  error: '#E74C3C',
+  errorLight: '#3D1A18',
+  info: '#3498DB',
+  infoLight: '#1A2D3D',
+
+  // Neutrals (inverted)
+  white: '#1A1A1A',
+  black: '#FFFFFF',
+  gray50: '#1E1E1E',
+  gray100: '#252525',
+  gray200: '#2D2D2D',
+  gray300: '#3D3D3D',
+  gray400: '#5C5C5C',
+  gray500: '#7A7A7A',
+  gray600: '#9E9E9E',
+  gray700: '#BDBDBD',
+  gray800: '#E0E0E0',
+  gray900: '#F5F5F5',
+
+  // Text (inverted)
+  textPrimary: '#F5F5F5',
+  textSecondary: '#B0B0B0',
+  textTertiary: '#808080',
+  textDisabled: '#505050',
+
+  // Background
+  background: '#121212',
+  backgroundSecondary: '#1A1A1A',
+  surface: '#1E1E1E',
+  overlay: 'rgba(0, 0, 0, 0.7)',
+
+  // Veg/Non-veg indicators (keep same for recognition)
+  veg: '#27AE60',
+  nonVeg: '#E31837',
+  egg: '#F39C12',
+
+  // Card/Container
+  card: '#1E1E1E',
+  border: '#2D2D2D',
+};
+
+// Default export for backward compatibility (light theme)
+export const colors = lightColors;
+
+// Function to get colors based on theme
+export const getColors = (isDark: boolean) => isDark ? darkColors : lightColors;
 
 export const spacing = {
   xs: 4,

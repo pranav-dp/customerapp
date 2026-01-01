@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius } from '../constants/colors';
+import { spacing, borderRadius } from '../constants/colors';
+import { useColors } from '../hooks/useColors';
 import { textStyles } from '../constants/typography';
 import { useAuth } from '../contexts/AuthContext';
 import { getCustomer } from '../services/firestore';
@@ -18,6 +19,7 @@ interface OwedItem {
 
 export default function MoneyOwedScreen() {
   const router = useRouter();
+  const colors = useColors();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const { customer } = useAuth();
   const [activeTab, setActiveTab] = useState<'iOwe' | 'owedToMe'>(tab === 'toMe' ? 'owedToMe' : 'iOwe');
@@ -57,35 +59,35 @@ export default function MoneyOwedScreen() {
   const isOwedToMe = activeTab === 'owedToMe';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]} edges={['top']}>
+      <View style={[styles.header, { backgroundColor: colors.white }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Money</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Money</Text>
         <View style={styles.backBtn} />
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, { backgroundColor: colors.white, borderBottomColor: colors.gray100 }]}>
         <TouchableOpacity 
-          style={[styles.tab, activeTab === 'iOwe' && styles.tabActive]} 
+          style={[styles.tab, { borderBottomColor: activeTab === 'iOwe' ? colors.primary : 'transparent' }]} 
           onPress={() => setActiveTab('iOwe')}
         >
-          <Text style={[styles.tabText, activeTab === 'iOwe' && styles.tabTextActive]}>I Owe</Text>
+          <Text style={[styles.tabText, { color: activeTab === 'iOwe' ? colors.primary : colors.textSecondary }]}>I Owe</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={[styles.tab, activeTab === 'owedToMe' && styles.tabActive]} 
+          style={[styles.tab, { borderBottomColor: activeTab === 'owedToMe' ? colors.primary : 'transparent' }]} 
           onPress={() => setActiveTab('owedToMe')}
         >
-          <Text style={[styles.tabText, activeTab === 'owedToMe' && styles.tabTextActive]}>Owed to Me</Text>
+          <Text style={[styles.tabText, { color: activeTab === 'owedToMe' ? colors.primary : colors.textSecondary }]}>Owed to Me</Text>
         </TouchableOpacity>
       </View>
 
       {/* Total Banner */}
-      <View style={[styles.totalBanner, isOwedToMe && styles.totalBannerGreen]}>
-        <Text style={styles.totalLabel}>{isOwedToMe ? 'Friends owe you' : 'You owe'}</Text>
-        <Text style={styles.totalAmount}>₹{total}</Text>
+      <View style={[styles.totalBanner, { backgroundColor: isOwedToMe ? colors.success : colors.warning }]}>
+        <Text style={[styles.totalLabel, { color: colors.white }]}>{isOwedToMe ? 'Friends owe you' : 'You owe'}</Text>
+        <Text style={[styles.totalAmount, { color: colors.white }]}>₹{total}</Text>
       </View>
 
       <FlatList
@@ -96,22 +98,22 @@ export default function MoneyOwedScreen() {
           !loading ? (
             <View style={styles.empty}>
               <Ionicons name="checkmark-circle-outline" size={64} color={colors.success} />
-              <Text style={styles.emptyText}>{isOwedToMe ? 'No one owes you' : "You're all settled!"}</Text>
+              <Text style={[styles.emptyText, { color: colors.textPrimary }]}>{isOwedToMe ? 'No one owes you' : "You're all settled!"}</Text>
             </View>
           ) : null
         }
         renderItem={({ item }) => (
-          <View style={styles.owedCard}>
-            <View style={[styles.owedAvatar, isOwedToMe && styles.avatarGreen]}>
-              <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+          <View style={[styles.owedCard, { backgroundColor: colors.white }]}>
+            <View style={[styles.owedAvatar, { backgroundColor: isOwedToMe ? colors.success : colors.warning }]}>
+              <Text style={[styles.avatarText, { color: colors.white }]}>{item.name.charAt(0)}</Text>
             </View>
             <View style={styles.owedInfo}>
-              <Text style={styles.owedName}>{item.name}</Text>
-              {item.username && <Text style={styles.owedUsername}>@{item.username}</Text>}
+              <Text style={[styles.owedName, { color: colors.textPrimary }]}>{item.name}</Text>
+              {item.username && <Text style={[styles.owedUsername, { color: colors.textSecondary }]}>@{item.username}</Text>}
             </View>
             <View style={styles.owedAmountContainer}>
-              <Text style={styles.owedAmountLabel}>{isOwedToMe ? 'Owes you' : 'You owe'}</Text>
-              <Text style={[styles.owedAmount, isOwedToMe && styles.amountGreen]}>₹{item.amount}</Text>
+              <Text style={[styles.owedAmountLabel, { color: colors.textSecondary }]}>{isOwedToMe ? 'Owes you' : 'You owe'}</Text>
+              <Text style={[styles.owedAmount, { color: isOwedToMe ? colors.success : colors.warning }]}>₹{item.amount}</Text>
             </View>
           </View>
         )}
@@ -121,40 +123,35 @@ export default function MoneyOwedScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.backgroundSecondary },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: colors.white,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  title: { ...textStyles.h3, color: colors.textPrimary },
+  title: { ...textStyles.h3 },
   tabs: {
-    flexDirection: 'row', backgroundColor: colors.white, paddingHorizontal: spacing.lg,
-    borderBottomWidth: 1, borderBottomColor: colors.gray100,
+    flexDirection: 'row', paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
   },
-  tab: { flex: 1, paddingVertical: spacing.md, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: colors.primary },
-  tabText: { ...textStyles.label, color: colors.textSecondary },
-  tabTextActive: { color: colors.primary },
-  totalBanner: { backgroundColor: colors.warning, padding: spacing.xl, alignItems: 'center' },
-  totalBannerGreen: { backgroundColor: colors.success },
-  totalLabel: { ...textStyles.body, color: colors.white, opacity: 0.9 },
-  totalAmount: { ...textStyles.h1, color: colors.white, marginTop: spacing.xs },
+  tab: { flex: 1, paddingVertical: spacing.md, alignItems: 'center', borderBottomWidth: 2 },
+  tabText: { ...textStyles.label },
+  totalBanner: { padding: spacing.xl, alignItems: 'center' },
+  totalLabel: { ...textStyles.body, opacity: 0.9 },
+  totalAmount: { ...textStyles.h1, marginTop: spacing.xs },
   list: { padding: spacing.lg },
   owedCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white,
+    flexDirection: 'row', alignItems: 'center',
     padding: spacing.lg, borderRadius: borderRadius.lg, marginBottom: spacing.md,
   },
-  owedAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.warning, alignItems: 'center', justifyContent: 'center' },
-  avatarGreen: { backgroundColor: colors.success },
-  avatarText: { ...textStyles.h4, color: colors.white },
+  owedAvatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { ...textStyles.h4 },
   owedInfo: { flex: 1, marginLeft: spacing.md },
-  owedName: { ...textStyles.label, color: colors.textPrimary },
-  owedUsername: { ...textStyles.caption, color: colors.textSecondary },
+  owedName: { ...textStyles.label },
+  owedUsername: { ...textStyles.caption },
   owedAmountContainer: { alignItems: 'flex-end' },
-  owedAmountLabel: { ...textStyles.caption, color: colors.textSecondary },
-  owedAmount: { ...textStyles.h3, color: colors.warning },
-  amountGreen: { color: colors.success },
+  owedAmountLabel: { ...textStyles.caption },
+  owedAmount: { ...textStyles.h3 },
   empty: { alignItems: 'center', paddingVertical: spacing.xxxl },
-  emptyText: { ...textStyles.h3, color: colors.textPrimary, marginTop: spacing.lg },
+  emptyText: { ...textStyles.h3, marginTop: spacing.lg },
 });

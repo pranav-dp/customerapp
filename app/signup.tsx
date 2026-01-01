@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platfor
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '../constants/colors';
+import { spacing } from '../constants/colors';
+import { useColors } from '../hooks/useColors';
 import { textStyles } from '../constants/typography';
 import { Button, Input, Header } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +12,7 @@ import { checkUsernameAvailable } from '../services/firestore';
 
 export default function SignupScreen() {
   const router = useRouter();
+  const colors = useColors();
   const { signup } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -87,7 +89,7 @@ export default function SignupScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.white }]} edges={['top', 'bottom']}>
       <Header 
         showBack 
         onBackPress={() => step === 1 ? router.back() : setStep(1)} 
@@ -103,15 +105,15 @@ export default function SignupScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.logoSmall}>
+            <View style={[styles.logoSmall, { backgroundColor: colors.primaryLight }]}>
               <Ionicons name="restaurant" size={32} color={colors.primary} />
             </View>
-            <Text style={styles.title}>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>
               {step === 1 ? 'Personal details' : 'Almost there!'}
             </Text>
           </View>
 
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             {step === 1 
               ? 'Let us know how to properly address you. Please fill in your details.'
               : 'Create a password and add your college info (optional).'}
@@ -119,9 +121,9 @@ export default function SignupScreen() {
 
           {/* Step indicator */}
           <View style={styles.stepIndicator}>
-            <View style={[styles.stepDot, styles.stepDotActive]} />
-            <View style={[styles.stepLine, step === 2 && styles.stepLineActive]} />
-            <View style={[styles.stepDot, step === 2 && styles.stepDotActive]} />
+            <View style={[styles.stepDot, { backgroundColor: colors.primary }]} />
+            <View style={[styles.stepLine, { backgroundColor: step === 2 ? colors.primary : colors.gray300 }]} />
+            <View style={[styles.stepDot, { backgroundColor: step === 2 ? colors.primary : colors.gray300 }]} />
           </View>
 
           {/* Form */}
@@ -190,8 +192,8 @@ export default function SignupScreen() {
                   leftIcon="lock-closed-outline"
                   error={errors.confirmPassword}
                 />
-                <View style={styles.optionalSection}>
-                  <Text style={styles.optionalLabel}>College Info (Optional)</Text>
+                <View style={[styles.optionalSection, { borderTopColor: colors.gray100 }]}>
+                  <Text style={[styles.optionalLabel, { color: colors.textSecondary }]}>College Info (Optional)</Text>
                   <Input
                     label="Roll Number"
                     placeholder="e.g., 2021CSE001"
@@ -214,17 +216,17 @@ export default function SignupScreen() {
 
           {/* Login link */}
           <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
+            <Text style={[styles.loginText, { color: colors.textSecondary }]}>Already have an account? </Text>
             <TouchableOpacity onPress={() => router.push('/login')}>
-              <Text style={styles.loginLink}>Log in</Text>
+              <Text style={[styles.loginLink, { color: colors.primary }]}>Log in</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
 
         {/* Bottom Button */}
-        <View style={styles.bottomSection}>
+        <View style={[styles.bottomSection, { borderTopColor: colors.gray100 }]}>
           <View style={styles.stepCounter}>
-            <Text style={styles.stepCounterText}>{step}/2</Text>
+            <Text style={[styles.stepCounterText, { color: colors.textTertiary, backgroundColor: colors.gray100 }]}>{step}/2</Text>
           </View>
           <Button
             title={step === 1 ? 'Continue' : 'Create Account'}
@@ -241,7 +243,6 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
   },
   keyboardView: {
     flex: 1,
@@ -260,19 +261,16 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.lg,
   },
   title: {
     ...textStyles.h1,
-    color: colors.textPrimary,
     flex: 1,
   },
   subtitle: {
     ...textStyles.body,
-    color: colors.textSecondary,
     marginBottom: spacing.xl,
   },
   stepIndicator: {
@@ -285,19 +283,11 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.gray300,
-  },
-  stepDotActive: {
-    backgroundColor: colors.primary,
   },
   stepLine: {
     width: 40,
     height: 2,
-    backgroundColor: colors.gray300,
     marginHorizontal: spacing.sm,
-  },
-  stepLineActive: {
-    backgroundColor: colors.primary,
   },
   form: {
     marginBottom: spacing.lg,
@@ -306,11 +296,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingTop: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.gray100,
   },
   optionalLabel: {
     ...textStyles.label,
-    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   loginContainer: {
@@ -320,17 +308,14 @@ const styles = StyleSheet.create({
   },
   loginText: {
     ...textStyles.body,
-    color: colors.textSecondary,
   },
   loginLink: {
     ...textStyles.label,
-    color: colors.primary,
   },
   bottomSection: {
     paddingHorizontal: spacing.xxl,
     paddingVertical: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.gray100,
   },
   stepCounter: {
     alignItems: 'center',
@@ -338,8 +323,6 @@ const styles = StyleSheet.create({
   },
   stepCounterText: {
     ...textStyles.labelSmall,
-    color: colors.textTertiary,
-    backgroundColor: colors.gray100,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: 12,

@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, ViewStyle, DimensionValue } from 'react-native';
+import { ViewStyle, DimensionValue } from 'react-native';
 import Animated, { useAnimatedStyle, withRepeat, withTiming, useSharedValue } from 'react-native-reanimated';
-import { colors, borderRadius } from '../../constants/colors';
+import { borderRadius } from '../../constants/colors';
+import { useColors } from '../../hooks/useColors';
 
 interface SkeletonProps {
   width?: DimensionValue;
@@ -16,6 +17,7 @@ export default function Skeleton({
   borderRadius: radius = borderRadius.md,
   style 
 }: SkeletonProps) {
+  const colors = useColors();
   const opacity = useSharedValue(0.3);
 
   React.useEffect(() => {
@@ -33,7 +35,7 @@ export default function Skeleton({
   return (
     <Animated.View
       style={[
-        styles.skeleton,
+        { backgroundColor: colors.gray200 },
         { width, height, borderRadius: radius },
         animatedStyle,
         style,
@@ -41,9 +43,3 @@ export default function Skeleton({
     />
   );
 }
-
-const styles = StyleSheet.create({
-  skeleton: {
-    backgroundColor: colors.gray200,
-  },
-});

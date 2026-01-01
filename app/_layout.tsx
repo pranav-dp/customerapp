@@ -9,13 +9,16 @@ import 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { CartProvider } from '../contexts/CartContext';
-import { colors } from '../constants/colors';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { useColors } from '../hooks/useColors';
 import { registerForPushNotifications } from '../services/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { user, customer, loading } = useAuth();
+  const { isDark } = useTheme();
+  const colors = useColors();
 
   // Register for push notifications when logged in
   useEffect(() => {
@@ -26,24 +29,27 @@ function RootLayoutNav() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="welcome" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="signup" />
-      <Stack.Screen name="friends" />
-      <Stack.Screen name="money-owed" />
-      <Stack.Screen name="edit-profile" />
-      <Stack.Screen name="insights" />
-      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="welcome" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="signup" />
+        <Stack.Screen name="friends" />
+        <Stack.Screen name="money-owed" />
+        <Stack.Screen name="edit-profile" />
+        <Stack.Screen name="insights" />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      </Stack>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </>
   );
 }
 
@@ -68,12 +74,13 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <CartProvider>
-          <RootLayoutNav />
-          <StatusBar style="dark" />
-        </CartProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <CartProvider>
+            <RootLayoutNav />
+          </CartProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
@@ -83,6 +90,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.white,
   },
 });

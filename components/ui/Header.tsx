@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, shadows } from '../../constants/colors';
+import { spacing, borderRadius } from '../../constants/colors';
+import { useColors } from '../../hooks/useColors';
 import { textStyles } from '../../constants/typography';
 
 interface HeaderProps {
@@ -21,8 +22,14 @@ export default function Header({
   onRightPress,
   transparent = false,
 }: HeaderProps) {
+  const colors = useColors();
+
   return (
-    <View style={[styles.container, transparent && styles.transparent]}>
+    <View style={[
+      styles.container, 
+      { backgroundColor: colors.white, borderBottomColor: colors.gray100 },
+      transparent && styles.transparent
+    ]}>
       <View style={styles.left}>
         {showBack && (
           <TouchableOpacity onPress={onBackPress} style={styles.iconButton}>
@@ -30,7 +37,7 @@ export default function Header({
           </TouchableOpacity>
         )}
       </View>
-      {title && <Text style={styles.title}>{title}</Text>}
+      {title && <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>}
       <View style={styles.right}>
         {rightIcon && (
           <TouchableOpacity onPress={onRightPress} style={styles.iconButton}>
@@ -49,9 +56,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
   transparent: {
     backgroundColor: 'transparent',
@@ -66,7 +71,6 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h3,
-    color: colors.textPrimary,
     flex: 1,
     textAlign: 'center',
   },

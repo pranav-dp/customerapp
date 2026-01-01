@@ -3,28 +3,30 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, shadows } from '../constants/colors';
+import { spacing, borderRadius, shadows } from '../constants/colors';
 import { textStyles } from '../constants/typography';
 import { useCart, CartItem } from '../contexts/CartContext';
+import { useColors } from '../hooks/useColors';
 import { formatPrice } from '../utils/restaurant';
 import { Button } from '../components/ui';
 
-function CartItemRow({ item, onIncrease, onDecrease, onRemove }: {
+function CartItemRow({ item, onIncrease, onDecrease, onRemove, colors }: {
   item: CartItem;
   onIncrease: () => void;
   onDecrease: () => void;
   onRemove: () => void;
+  colors: ReturnType<typeof useColors>;
 }) {
   return (
-    <View style={styles.itemRow}>
-      <View style={[styles.vegIndicator, item.isVeg ? styles.vegIndicatorVeg : styles.vegIndicatorNonVeg]}>
-        <View style={[styles.vegDot, item.isVeg ? styles.vegDotVeg : styles.vegDotNonVeg]} />
+    <View style={[styles.itemRow, { borderBottomColor: colors.gray100 }]}>
+      <View style={[styles.vegIndicator, { borderColor: item.isVeg ? colors.veg : colors.nonVeg }]}>
+        <View style={[styles.vegDot, { backgroundColor: item.isVeg ? colors.veg : colors.nonVeg }]} />
       </View>
       <View style={styles.itemInfo}>
-        <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
-        <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
+        <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={2}>{item.name}</Text>
+        <Text style={[styles.itemPrice, { color: colors.textSecondary }]}>{formatPrice(item.price)}</Text>
       </View>
-      <View style={styles.quantityControl}>
+      <View style={[styles.quantityControl, { backgroundColor: colors.white, borderColor: colors.success }]}>
         <TouchableOpacity 
           style={styles.quantityButton} 
           onPress={item.quantity === 1 ? onRemove : onDecrease}
@@ -35,18 +37,19 @@ function CartItemRow({ item, onIncrease, onDecrease, onRemove }: {
             color={colors.success} 
           />
         </TouchableOpacity>
-        <Text style={styles.quantity}>{item.quantity}</Text>
+        <Text style={[styles.quantity, { color: colors.success }]}>{item.quantity}</Text>
         <TouchableOpacity style={styles.quantityButton} onPress={onIncrease}>
           <Ionicons name="add" size={16} color={colors.success} />
         </TouchableOpacity>
       </View>
-      <Text style={styles.itemTotal}>{formatPrice(item.price * item.quantity)}</Text>
+      <Text style={[styles.itemTotal, { color: colors.textPrimary }]}>{formatPrice(item.price * item.quantity)}</Text>
     </View>
   );
 }
 
 export default function CartScreen() {
   const router = useRouter();
+  const colors = useColors();
   const { items, restaurantName, totalAmount, updateQuantity, removeItem, clearCart } = useCart();
 
   const handleClearCart = () => {
@@ -62,20 +65,20 @@ export default function CartScreen() {
 
   if (items.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <View style={styles.header}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]} edges={['top', 'bottom']}>
+        <View style={[styles.header, { backgroundColor: colors.white, borderBottomColor: colors.gray100 }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Cart</Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Cart</Text>
           <View style={styles.backButton} />
         </View>
         <View style={styles.emptyState}>
-          <View style={styles.emptyIcon}>
+          <View style={[styles.emptyIcon, { backgroundColor: colors.gray100 }]}>
             <Ionicons name="cart-outline" size={64} color={colors.gray300} />
           </View>
-          <Text style={styles.emptyTitle}>Your cart is empty</Text>
-          <Text style={styles.emptyText}>Add items from a restaurant to get started</Text>
+          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Your cart is empty</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Add items from a restaurant to get started</Text>
           <Button title="Browse Restaurants" onPress={() => router.push('/(tabs)')} style={{ marginTop: spacing.xl }} />
         </View>
       </SafeAreaView>
@@ -83,13 +86,13 @@ export default function CartScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]} edges={['top', 'bottom']}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.white, borderBottomColor: colors.gray100 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cart</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Cart</Text>
         <TouchableOpacity onPress={handleClearCart} style={styles.backButton}>
           <Ionicons name="trash-outline" size={22} color={colors.error} />
         </TouchableOpacity>
@@ -97,13 +100,13 @@ export default function CartScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Restaurant Info */}
-        <View style={styles.restaurantInfo}>
+        <View style={[styles.restaurantInfo, { backgroundColor: colors.white }]}>
           <Ionicons name="restaurant-outline" size={20} color={colors.textSecondary} />
-          <Text style={styles.restaurantName}>{restaurantName}</Text>
+          <Text style={[styles.restaurantName, { color: colors.textPrimary }]}>{restaurantName}</Text>
         </View>
 
         {/* Cart Items */}
-        <View style={styles.itemsContainer}>
+        <View style={[styles.itemsContainer, { backgroundColor: colors.white }]}>
           {items.map(item => (
             <CartItemRow
               key={item.id}
@@ -111,33 +114,34 @@ export default function CartScreen() {
               onIncrease={() => updateQuantity(item.id, item.quantity + 1)}
               onDecrease={() => updateQuantity(item.id, item.quantity - 1)}
               onRemove={() => removeItem(item.id)}
+              colors={colors}
             />
           ))}
         </View>
 
         {/* Bill Details */}
-        <View style={styles.billContainer}>
-          <Text style={styles.billTitle}>Bill Details</Text>
+        <View style={[styles.billContainer, { backgroundColor: colors.white }]}>
+          <Text style={[styles.billTitle, { color: colors.textPrimary }]}>Bill Details</Text>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Item Total</Text>
-            <Text style={styles.billValue}>{formatPrice(totalAmount)}</Text>
+            <Text style={[styles.billLabel, { color: colors.textSecondary }]}>Item Total</Text>
+            <Text style={[styles.billValue, { color: colors.textPrimary }]}>{formatPrice(totalAmount)}</Text>
           </View>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Platform Fee</Text>
-            <Text style={styles.billValue}>{formatPrice(0)}</Text>
+            <Text style={[styles.billLabel, { color: colors.textSecondary }]}>Platform Fee</Text>
+            <Text style={[styles.billValue, { color: colors.textPrimary }]}>{formatPrice(0)}</Text>
           </View>
-          <View style={[styles.billRow, styles.billTotal]}>
-            <Text style={styles.totalLabel}>To Pay</Text>
-            <Text style={styles.totalValue}>{formatPrice(totalAmount)}</Text>
+          <View style={[styles.billRow, styles.billTotal, { borderTopColor: colors.gray200 }]}>
+            <Text style={[styles.totalLabel, { color: colors.textPrimary }]}>To Pay</Text>
+            <Text style={[styles.totalValue, { color: colors.textPrimary }]}>{formatPrice(totalAmount)}</Text>
           </View>
         </View>
       </ScrollView>
 
       {/* Checkout Button */}
-      <View style={styles.checkoutContainer}>
+      <View style={[styles.checkoutContainer, { backgroundColor: colors.white, borderTopColor: colors.gray100 }]}>
         <View style={styles.checkoutInfo}>
-          <Text style={styles.checkoutTotal}>{formatPrice(totalAmount)}</Text>
-          <Text style={styles.checkoutLabel}>Total</Text>
+          <Text style={[styles.checkoutTotal, { color: colors.textPrimary }]}>{formatPrice(totalAmount)}</Text>
+          <Text style={[styles.checkoutLabel, { color: colors.textSecondary }]}>Total</Text>
         </View>
         <Button title="Proceed to Checkout" onPress={handleCheckout} style={styles.checkoutButton} />
       </View>
@@ -148,7 +152,6 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -156,9 +159,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
   backButton: {
     width: 40,
@@ -169,7 +170,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...textStyles.h3,
-    color: colors.textPrimary,
   },
   emptyState: {
     flex: 1,
@@ -181,35 +181,29 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
   },
   emptyTitle: {
     ...textStyles.h2,
-    color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   emptyText: {
     ...textStyles.body,
-    color: colors.textSecondary,
     textAlign: 'center',
   },
   restaurantInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
     padding: spacing.lg,
     marginBottom: spacing.sm,
   },
   restaurantName: {
     ...textStyles.label,
-    color: colors.textPrimary,
     marginLeft: spacing.sm,
   },
   itemsContainer: {
-    backgroundColor: colors.white,
     paddingHorizontal: spacing.lg,
   },
   itemRow: {
@@ -217,7 +211,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
   vegIndicator: {
     width: 14,
@@ -227,30 +220,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  vegIndicatorVeg: { borderColor: colors.veg },
-  vegIndicatorNonVeg: { borderColor: colors.nonVeg },
   vegDot: { width: 7, height: 7, borderRadius: 3.5 },
-  vegDotVeg: { backgroundColor: colors.veg },
-  vegDotNonVeg: { backgroundColor: colors.nonVeg },
   itemInfo: {
     flex: 1,
     marginLeft: spacing.md,
   },
   itemName: {
     ...textStyles.label,
-    color: colors.textPrimary,
   },
   itemPrice: {
     ...textStyles.bodySmall,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.success,
     borderRadius: borderRadius.md,
     marginHorizontal: spacing.md,
   },
@@ -259,24 +244,20 @@ const styles = StyleSheet.create({
   },
   quantity: {
     ...textStyles.label,
-    color: colors.success,
     minWidth: 24,
     textAlign: 'center',
   },
   itemTotal: {
     ...textStyles.label,
-    color: colors.textPrimary,
     minWidth: 60,
     textAlign: 'right',
   },
   billContainer: {
-    backgroundColor: colors.white,
     marginTop: spacing.sm,
     padding: spacing.lg,
   },
   billTitle: {
     ...textStyles.h4,
-    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   billRow: {
@@ -286,44 +267,35 @@ const styles = StyleSheet.create({
   },
   billLabel: {
     ...textStyles.body,
-    color: colors.textSecondary,
   },
   billValue: {
     ...textStyles.body,
-    color: colors.textPrimary,
   },
   billTotal: {
     borderTopWidth: 1,
-    borderTopColor: colors.gray200,
     paddingTop: spacing.md,
     marginTop: spacing.sm,
   },
   totalLabel: {
     ...textStyles.h4,
-    color: colors.textPrimary,
   },
   totalValue: {
     ...textStyles.h4,
-    color: colors.textPrimary,
   },
   checkoutContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
     padding: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.gray100,
   },
   checkoutInfo: {
     marginRight: spacing.lg,
   },
   checkoutTotal: {
     ...textStyles.h3,
-    color: colors.textPrimary,
   },
   checkoutLabel: {
     ...textStyles.caption,
-    color: colors.textSecondary,
   },
   checkoutButton: {
     flex: 1,

@@ -3,13 +3,15 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
-import { colors, spacing, borderRadius, shadows } from '../../constants/colors';
+import { spacing, borderRadius, shadows } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { useCart } from '../../contexts/CartContext';
+import { useColors } from '../../hooks/useColors';
 import { formatPrice } from '../../utils/restaurant';
 
 export default function CartBar() {
   const router = useRouter();
+  const colors = useColors();
   const { totalItems, totalAmount, restaurantName } = useCart();
 
   if (totalItems === 0) return null;
@@ -21,24 +23,24 @@ export default function CartBar() {
       exiting={FadeOutDown.duration(200)}
     >
       <TouchableOpacity 
-        style={styles.bar} 
+        style={[styles.bar, { backgroundColor: colors.success }, shadows.lg]} 
         onPress={() => router.push('/cart')}
         activeOpacity={0.9}
       >
         <View style={styles.left}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{totalItems}</Text>
+          <View style={[styles.badge, { backgroundColor: colors.white }]}>
+            <Text style={[styles.badgeText, { color: colors.success }]}>{totalItems}</Text>
           </View>
           <View style={styles.info}>
-            <Text style={styles.itemCount}>
+            <Text style={[styles.itemCount, { color: colors.white }]}>
               {totalItems} {totalItems === 1 ? 'item' : 'items'}
             </Text>
             <Text style={styles.restaurant} numberOfLines={1}>{restaurantName}</Text>
           </View>
         </View>
         <View style={styles.right}>
-          <Text style={styles.total}>{formatPrice(totalAmount)}</Text>
-          <Text style={styles.viewCart}>View Cart</Text>
+          <Text style={[styles.total, { color: colors.white }]}>{formatPrice(totalAmount)}</Text>
+          <Text style={[styles.viewCart, { color: colors.white }]}>View Cart</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.white} />
         </View>
       </TouchableOpacity>
@@ -59,11 +61,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.success,
     borderRadius: borderRadius.xl,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    ...shadows.lg,
   },
   left: {
     flexDirection: 'row',
@@ -71,7 +71,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   badge: {
-    backgroundColor: colors.white,
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -80,7 +79,6 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     ...textStyles.labelSmall,
-    color: colors.success,
     fontWeight: '700',
   },
   info: {
@@ -89,7 +87,6 @@ const styles = StyleSheet.create({
   },
   itemCount: {
     ...textStyles.labelSmall,
-    color: colors.white,
   },
   restaurant: {
     ...textStyles.caption,
@@ -101,12 +98,10 @@ const styles = StyleSheet.create({
   },
   total: {
     ...textStyles.h4,
-    color: colors.white,
     marginRight: spacing.sm,
   },
   viewCart: {
     ...textStyles.labelSmall,
-    color: colors.white,
     marginRight: spacing.xs,
   },
 });

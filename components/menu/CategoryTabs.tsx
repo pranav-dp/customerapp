@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { colors, spacing, borderRadius } from '../../constants/colors';
+import { spacing, borderRadius } from '../../constants/colors';
+import { useColors } from '../../hooks/useColors';
 import { textStyles } from '../../constants/typography';
 
 interface CategoryTabsProps {
@@ -12,9 +13,10 @@ interface CategoryTabsProps {
 
 export default function CategoryTabs({ categories, activeCategory, onCategoryChange, itemCounts }: CategoryTabsProps) {
   const scrollRef = useRef<ScrollView>(null);
+  const colors = useColors();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.white, borderBottomColor: colors.gray100 }]}>
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -28,14 +30,14 @@ export default function CategoryTabs({ categories, activeCategory, onCategoryCha
           return (
             <TouchableOpacity
               key={category}
-              style={[styles.tab, isActive && styles.tabActive]}
+              style={[styles.tab, { backgroundColor: isActive ? colors.textPrimary : colors.gray100 }]}
               onPress={() => onCategoryChange(category)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+              <Text style={[styles.tabText, { color: isActive ? colors.white : colors.textSecondary }]}>
                 {category}
               </Text>
-              <Text style={[styles.tabCount, isActive && styles.tabCountActive]}>
+              <Text style={[styles.tabCount, { color: isActive ? colors.gray400 : colors.textTertiary }]}>
                 ({count})
               </Text>
             </TouchableOpacity>
@@ -48,9 +50,7 @@ export default function CategoryTabs({ categories, activeCategory, onCategoryCha
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
@@ -63,25 +63,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.gray100,
     marginRight: spacing.sm,
-  },
-  tabActive: {
-    backgroundColor: colors.textPrimary,
   },
   tabText: {
     ...textStyles.label,
-    color: colors.textSecondary,
-  },
-  tabTextActive: {
-    color: colors.white,
   },
   tabCount: {
     ...textStyles.labelSmall,
-    color: colors.textTertiary,
     marginLeft: spacing.xs,
-  },
-  tabCountActive: {
-    color: colors.gray400,
   },
 });

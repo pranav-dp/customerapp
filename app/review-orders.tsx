@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius } from '../constants/colors';
+import { spacing, borderRadius } from '../constants/colors';
+import { useColors } from '../hooks/useColors';
 import { textStyles } from '../constants/typography';
 import { useAuth } from '../contexts/AuthContext';
 import { getCustomerOrders, Order } from '../services/orders';
@@ -13,6 +14,7 @@ import { Skeleton } from '../components/ui';
 type SortType = 'recent' | 'oldest';
 
 export default function ReviewOrdersScreen() {
+  const colors = useColors();
   const router = useRouter();
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -59,45 +61,45 @@ export default function ReviewOrdersScreen() {
   const notReviewedCount = orders.length - reviewedCount;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]} edges={['top']}>
+      <View style={[styles.header, { backgroundColor: colors.white, borderBottomColor: colors.gray100 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Review Your Orders</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Review Your Orders</Text>
         <View style={styles.backBtn} />
       </View>
 
       {/* Stats */}
       {!loading && orders.length > 0 && (
-        <View style={styles.statsRow}>
-          <View style={styles.statBadge}>
-            <Text style={styles.statNumber}>{notReviewedCount}</Text>
-            <Text style={styles.statLabel}>To Review</Text>
+        <View style={[styles.statsRow, { backgroundColor: colors.white }]}>
+          <View style={[styles.statBadge, { backgroundColor: colors.primaryLight }]}>
+            <Text style={[styles.statNumber, { color: colors.primary }]}>{notReviewedCount}</Text>
+            <Text style={[styles.statLabel, { color: colors.primary }]}>To Review</Text>
           </View>
-          <View style={[styles.statBadge, styles.statBadgeSecondary]}>
-            <Text style={[styles.statNumber, styles.statNumberSecondary]}>{reviewedCount}</Text>
-            <Text style={[styles.statLabel, styles.statLabelSecondary]}>Reviewed</Text>
+          <View style={[styles.statBadge, { backgroundColor: colors.successLight }]}>
+            <Text style={[styles.statNumber, { color: colors.success }]}>{reviewedCount}</Text>
+            <Text style={[styles.statLabel, { color: colors.success }]}>Reviewed</Text>
           </View>
         </View>
       )}
 
       {/* Sort Filters */}
       {!loading && orders.length > 0 && (
-        <View style={styles.filtersContainer}>
+        <View style={[styles.filtersContainer, { backgroundColor: colors.white, borderBottomColor: colors.gray100 }]}>
           <TouchableOpacity
-            style={[styles.filterBtn, sortBy === 'recent' && styles.filterBtnActive]}
+            style={[styles.filterBtn, { backgroundColor: colors.gray100 }, sortBy === 'recent' && { backgroundColor: colors.primary }]}
             onPress={() => setSortBy('recent')}
           >
-            <Text style={[styles.filterText, sortBy === 'recent' && styles.filterTextActive]}>
+            <Text style={[styles.filterText, { color: colors.textSecondary }, sortBy === 'recent' && { color: colors.white }]}>
               Most Recent
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterBtn, sortBy === 'oldest' && styles.filterBtnActive]}
+            style={[styles.filterBtn, { backgroundColor: colors.gray100 }, sortBy === 'oldest' && { backgroundColor: colors.primary }]}
             onPress={() => setSortBy('oldest')}
           >
-            <Text style={[styles.filterText, sortBy === 'oldest' && styles.filterTextActive]}>
+            <Text style={[styles.filterText, { color: colors.textSecondary }, sortBy === 'oldest' && { color: colors.white }]}>
               Oldest First
             </Text>
           </TouchableOpacity>
@@ -117,11 +119,11 @@ export default function ReviewOrdersScreen() {
           </>
         ) : orders.length === 0 ? (
           <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
+            <View style={[styles.emptyIcon, { backgroundColor: colors.gray100 }]}>
               <Ionicons name="receipt-outline" size={64} color={colors.gray300} />
             </View>
-            <Text style={styles.emptyTitle}>No completed orders</Text>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No completed orders</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               Once you complete orders, you can review them here.
             </Text>
           </View>
@@ -131,6 +133,7 @@ export default function ReviewOrdersScreen() {
               key={order.id || order.orderNumber}
               order={order} 
               onPress={() => router.push(`/review/${order.id}`)}
+              colors={colors}
             />
           ))
         )}
@@ -139,7 +142,7 @@ export default function ReviewOrdersScreen() {
   );
 }
 
-function OrderCard({ order, onPress, key: _key }: { order: Order; onPress: () => void; key?: string }) {
+function OrderCard({ order, onPress, colors, key: _key }: { order: Order; onPress: () => void; colors: ReturnType<typeof useColors>; key?: string }) {
   const date = order.createdAt instanceof Date 
     ? order.createdAt 
     : (order.createdAt as any)?.toDate?.() || new Date();
@@ -149,33 +152,33 @@ function OrderCard({ order, onPress, key: _key }: { order: Order; onPress: () =>
   const isReviewed = order.isReviewed;
 
   return (
-    <TouchableOpacity style={styles.orderCard} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={[styles.orderCard, { backgroundColor: colors.white }]} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.orderHeader}>
         <View style={styles.orderInfo}>
-          <Text style={styles.orderNumber}>#{order.orderNumber}</Text>
-          <Text style={styles.restaurantName}>{order.restaurantName}</Text>
+          <Text style={[styles.orderNumber, { color: colors.primary }]}>#{order.orderNumber}</Text>
+          <Text style={[styles.restaurantName, { color: colors.textPrimary }]}>{order.restaurantName}</Text>
         </View>
-        <View style={[styles.reviewStatus, isReviewed ? styles.reviewedStatus : styles.notReviewedStatus]}>
+        <View style={[styles.reviewStatus, isReviewed ? { backgroundColor: colors.successLight } : { backgroundColor: colors.primaryLight }]}>
           <Ionicons 
             name={isReviewed ? "checkmark-circle" : "star-outline"} 
             size={14} 
             color={isReviewed ? colors.success : colors.primary} 
           />
-          <Text style={[styles.reviewStatusText, isReviewed ? styles.reviewedText : styles.notReviewedText]}>
+          <Text style={[styles.reviewStatusText, isReviewed ? { color: colors.success } : { color: colors.primary }]}>
             {isReviewed ? 'Reviewed' : 'Review'}
           </Text>
         </View>
       </View>
       
-      <Text style={styles.orderItems} numberOfLines={1}>
+      <Text style={[styles.orderItems, { color: colors.textSecondary }]} numberOfLines={1}>
         {itemsSummary}{moreItems}
       </Text>
       
       <View style={styles.orderFooter}>
-        <Text style={styles.orderDate}>
+        <Text style={[styles.orderDate, { color: colors.textTertiary }]}>
           {date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
         </Text>
-        <Text style={styles.orderAmount}>₹{order.totalAmount}</Text>
+        <Text style={[styles.orderAmount, { color: colors.textPrimary }]}>₹{order.totalAmount}</Text>
       </View>
       
       <View style={styles.chevronContainer}>
@@ -186,79 +189,53 @@ function OrderCard({ order, onPress, key: _key }: { order: Order; onPress: () =>
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.backgroundSecondary },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  title: { ...textStyles.h3, color: colors.textPrimary },
+  title: { ...textStyles.h3 },
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
     gap: spacing.md,
   },
   statBadge: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     alignItems: 'center',
   },
-  statBadgeSecondary: {
-    backgroundColor: colors.successLight,
-  },
   statNumber: {
     ...textStyles.h2,
-    color: colors.primary,
-  },
-  statNumberSecondary: {
-    color: colors.success,
   },
   statLabel: {
     ...textStyles.caption,
-    color: colors.primary,
     marginTop: spacing.xs,
-  },
-  statLabelSecondary: {
-    color: colors.success,
   },
   filtersContainer: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
     gap: spacing.sm,
   },
   filterBtn: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.gray100,
-  },
-  filterBtnActive: {
-    backgroundColor: colors.primary,
   },
   filterText: {
     ...textStyles.labelSmall,
-    color: colors.textSecondary,
-  },
-  filterTextActive: {
-    color: colors.white,
   },
   content: { flex: 1, padding: spacing.lg },
   orderCard: {
-    backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
     marginBottom: spacing.md,
@@ -275,11 +252,9 @@ const styles = StyleSheet.create({
   },
   orderNumber: {
     ...textStyles.label,
-    color: colors.primary,
   },
   restaurantName: {
     ...textStyles.h4,
-    color: colors.textPrimary,
     marginTop: 2,
   },
   reviewStatus: {
@@ -290,24 +265,11 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     gap: 4,
   },
-  notReviewedStatus: {
-    backgroundColor: colors.primaryLight,
-  },
-  reviewedStatus: {
-    backgroundColor: colors.successLight,
-  },
   reviewStatusText: {
     ...textStyles.labelSmall,
   },
-  notReviewedText: {
-    color: colors.primary,
-  },
-  reviewedText: {
-    color: colors.success,
-  },
   orderItems: {
     ...textStyles.body,
-    color: colors.textSecondary,
     marginBottom: spacing.sm,
   },
   orderFooter: {
@@ -317,11 +279,9 @@ const styles = StyleSheet.create({
   },
   orderDate: {
     ...textStyles.caption,
-    color: colors.textTertiary,
   },
   orderAmount: {
     ...textStyles.label,
-    color: colors.textPrimary,
   },
   chevronContainer: {
     position: 'absolute',
@@ -338,15 +298,13 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
   },
-  emptyTitle: { ...textStyles.h3, color: colors.textPrimary, marginBottom: spacing.sm },
+  emptyTitle: { ...textStyles.h3, marginBottom: spacing.sm },
   emptyText: {
     ...textStyles.body,
-    color: colors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: spacing.xl,
   },
