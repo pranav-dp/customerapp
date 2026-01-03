@@ -193,7 +193,7 @@ export default function OrderDetailScreen() {
         {order.isTreat && (
           <View style={[styles.section, styles.treatSection, { backgroundColor: colors.warningLight }]}>
             <View style={styles.treatHeader}>
-              <Ionicons name="gift" size={20} color={colors.warning} />
+              <Ionicons name="people" size={20} color={colors.warning} />
               <Text style={[styles.treatTitle, { color: colors.warning }]}>Treat by {order.treatHostName}</Text>
             </View>
             {order.treatParticipants && order.treatParticipants.length > 0 && (

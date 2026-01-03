@@ -39,7 +39,7 @@ export default function CartBar({ treatRoom }: Props) {
         >
           <View style={styles.left}>
             <View style={[styles.badge, { backgroundColor: colors.white }]}>
-              <Ionicons name="gift" size={14} color={colors.warning} />
+              <Ionicons name="people" size={14} color={colors.warning} />
             </View>
             <View style={styles.info}>
               <Text style={[styles.itemCount, { color: colors.white }]}>

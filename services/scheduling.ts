@@ -17,10 +17,14 @@ export const generateTimeSlots = (operatingHours?: OperatingHours): TimeSlot[] =
     const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() as keyof OperatingHours;
     const hours = operatingHours?.[dayName];
 
-    if (!hours?.isOpen) continue;
+    // Default hours if not provided: 8 AM - 10 PM
+    const openH = hours?.isOpen ? parseInt(hours.open.split(':')[0]) : 8;
+    const openM = hours?.isOpen ? parseInt(hours.open.split(':')[1]) : 0;
+    const closeH = hours?.isOpen ? parseInt(hours.close.split(':')[0]) : 22;
+    const closeM = hours?.isOpen ? parseInt(hours.close.split(':')[1]) : 0;
 
-    const [openH, openM] = hours.open.split(':').map(Number);
-    const [closeH, closeM] = hours.close.split(':').map(Number);
+    // Skip if explicitly closed
+    if (hours && !hours.isOpen) continue;
 
     // Generate 30-min slots
     for (let h = openH; h <= closeH; h++) {

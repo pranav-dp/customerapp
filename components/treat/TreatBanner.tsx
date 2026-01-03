@@ -23,7 +23,7 @@ export function TreatBanner({ room, isHost }: Props) {
       onPress={() => router.push(`/treat-room/${room.id}` as any)}
     >
       <View style={styles.left}>
-        <Ionicons name="gift" size={20} color="#fff" />
+        <Ionicons name="people" size={20} color="#fff" />
         <View>
           <Text style={styles.title}>
             {isHost ? 'You\'re treating!' : `${room.hostName}'s treat`}

@@ -18,7 +18,7 @@ export default function CreateTreatScreen() {
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const friends = customer?.friends || [];
+  const friends = (customer?.friends || []).filter((f: any) => f.odid && f.odname);
 
   const toggleFriend = (odid: string) => {
     setSelectedFriends(prev => 

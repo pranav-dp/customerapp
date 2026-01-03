@@ -59,7 +59,7 @@ export default function CheckoutScreen() {
   // "Me" + friends list
   const allPeople: Friend[] = [
     { id: 'me', name: customer?.name || 'Me' },
-    ...(customer?.friends?.map(f => ({ id: f.odid, name: f.odname })) || []),
+    ...(customer?.friends?.filter(f => f.odid && f.odname).map(f => ({ id: f.odid, name: f.odname })) || []),
   ];
 
   const selectedItem = items.find(i => i.id === selectedItemId);

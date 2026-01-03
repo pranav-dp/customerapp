@@ -96,7 +96,8 @@ export default function RestaurantDetailScreen() {
   useEffect(() => {
     const fetchFriendsOrders = async () => {
       if (!id || !customer?.friends?.length) return;
-      const friendIds = customer.friends.map((f: any) => f.odid);
+      const friendIds = customer.friends.map((f: any) => f.odid).filter(Boolean);
+      if (friendIds.length === 0) return;
       const result = await getFriendsWhoOrdered(id, friendIds);
       if (result.success && result.data) {
         setFriendsOrders(result.data);
@@ -340,7 +341,7 @@ export default function RestaurantDetailScreen() {
               router.push({ pathname: '/treat-room/create' as any, params: { restaurantId: id, restaurantName: restaurant?.name } });
             }}
           >
-            <Ionicons name="gift" size={18} color={colors.warning} />
+            <Ionicons name="people" size={18} color={colors.warning} />
             <Text style={[styles.treatButtonText, { color: colors.warning }]}>Start a Treat</Text>
           </TouchableOpacity>
         )}
@@ -365,7 +366,7 @@ export default function RestaurantDetailScreen() {
                   style={[styles.treatToggleBtn, addToTreat && { backgroundColor: colors.warning }]}
                   onPress={() => setAddToTreat(true)}
                 >
-                  <Ionicons name="gift" size={14} color={addToTreat ? '#fff' : colors.textSecondary} />
+                  <Ionicons name="people" size={14} color={addToTreat ? '#fff' : colors.textSecondary} />
                   <Text style={[styles.treatToggleBtnText, { color: addToTreat ? '#fff' : colors.textSecondary }]}>For Treat</Text>
                 </TouchableOpacity>
               </View>

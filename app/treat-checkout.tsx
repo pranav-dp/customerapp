@@ -95,7 +95,7 @@ export default function TreatCheckoutScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]} edges={['top', 'bottom']}>
       <View style={[styles.header, { backgroundColor: colors.warning }]}>
-        <Ionicons name="gift" size={32} color="#fff" />
+        <Ionicons name="people" size={32} color="#fff" />
         <Text style={styles.headerTitle}>Treat Checkout</Text>
       </View>
 

@@ -18,7 +18,7 @@ export function TreatInviteCard({ invite, onAccept, onDecline }: Props) {
   return (
     <View style={[styles.container, { backgroundColor: colors.warningLight, borderColor: colors.warning }]}>
       <View style={styles.header}>
-        <Ionicons name="gift" size={20} color={colors.warning} />
+        <Ionicons name="people" size={20} color={colors.warning} />
         <Text style={[styles.title, { color: colors.textPrimary }]}>Treat Invite!</Text>
       </View>
       <Text style={[styles.message, { color: colors.textSecondary }]}>

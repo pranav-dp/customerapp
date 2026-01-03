@@ -131,7 +131,7 @@ export default function HomeScreen() {
       if (!status.isOpen) return; // Only search open restaurants
       
       restaurant.menu?.forEach(item => {
-        if (!item.isAvailable) return;
+        if (!item.isAvailable || !item.name) return;
         if (!item.name.toLowerCase().includes(query)) return;
         
         // Apply veg filter (treat undefined/null as veg for old items)

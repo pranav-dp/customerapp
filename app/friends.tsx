@@ -25,7 +25,7 @@ export default function FriendsScreen() {
   const [searchResults, setSearchResults] = useState<UserResult[]>([]);
   const [searching, setSearching] = useState(false);
 
-  const friends = customer?.friends || [];
+  const friends = (customer?.friends || []).filter(f => f.odid && f.odname);
   const owes = customer?.owes || {};
   const friendIds = friends.map(f => f.odid).join(','); // Stable reference for useEffect
 
@@ -129,7 +129,7 @@ export default function FriendsScreen() {
         {/* Search Results Dropdown */}
         {searchResults.length > 0 && (
           <View style={[styles.dropdown, { backgroundColor: colors.white, borderColor: colors.gray200 }]}>
-            {searchResults.map(user => (
+            {searchResults.filter(u => u.name).map(user => (
               <TouchableOpacity
                 key={user.id}
                 style={[styles.dropdownItem, { borderBottomColor: colors.gray100 }]}

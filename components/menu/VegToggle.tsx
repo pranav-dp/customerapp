@@ -50,7 +50,10 @@ export function VegToggle({ value, onChange, compact = false }: VegToggleProps) 
         onPress={() => handlePress('all')}
         activeOpacity={0.7}
       >
-        <Ionicons name="grid-outline" size={14} color={value === 'all' ? colors.textPrimary : colors.textTertiary} />
+        <View style={styles.bothIndicator}>
+          <View style={[styles.halfDot, { backgroundColor: colors.veg }]} />
+          <View style={[styles.halfDot, { backgroundColor: colors.nonVeg }]} />
+        </View>
         {!compact && <Text style={[styles.label, { color: value === 'all' ? colors.textPrimary : colors.textSecondary }]}>Both</Text>}
       </TouchableOpacity>
 
@@ -101,6 +104,17 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 3.5,
+  },
+  bothIndicator: {
+    flexDirection: 'row',
+    width: 14,
+    height: 14,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  halfDot: {
+    width: 7,
+    height: 14,
   },
   label: {
     ...textStyles.labelSmall,
