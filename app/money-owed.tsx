@@ -102,21 +102,24 @@ export default function MoneyOwedScreen() {
             </View>
           ) : null
         }
-        renderItem={({ item }) => (
-          <View style={[styles.owedCard, { backgroundColor: colors.white }]}>
-            <View style={[styles.owedAvatar, { backgroundColor: isOwedToMe ? colors.success : colors.warning }]}>
-              <Text style={[styles.avatarText, { color: colors.white }]}>{item.name.charAt(0)}</Text>
+        renderItem={({ item }) => {
+          const displayName = item.name || 'Unknown';
+          return (
+            <View style={[styles.owedCard, { backgroundColor: colors.white }]}>
+              <View style={[styles.owedAvatar, { backgroundColor: isOwedToMe ? colors.success : colors.warning }]}>
+                <Text style={[styles.avatarText, { color: colors.white }]}>{displayName.charAt(0)}</Text>
+              </View>
+              <View style={styles.owedInfo}>
+                <Text style={[styles.owedName, { color: colors.textPrimary }]}>{displayName}</Text>
+                {item.username && <Text style={[styles.owedUsername, { color: colors.textSecondary }]}>@{item.username}</Text>}
+              </View>
+              <View style={styles.owedAmountContainer}>
+                <Text style={[styles.owedAmountLabel, { color: colors.textSecondary }]}>{isOwedToMe ? 'Owes you' : 'You owe'}</Text>
+                <Text style={[styles.owedAmount, { color: isOwedToMe ? colors.success : colors.warning }]}>₹{item.amount}</Text>
+              </View>
             </View>
-            <View style={styles.owedInfo}>
-              <Text style={[styles.owedName, { color: colors.textPrimary }]}>{item.name}</Text>
-              {item.username && <Text style={[styles.owedUsername, { color: colors.textSecondary }]}>@{item.username}</Text>}
-            </View>
-            <View style={styles.owedAmountContainer}>
-              <Text style={[styles.owedAmountLabel, { color: colors.textSecondary }]}>{isOwedToMe ? 'Owes you' : 'You owe'}</Text>
-              <Text style={[styles.owedAmount, { color: isOwedToMe ? colors.success : colors.warning }]}>₹{item.amount}</Text>
-            </View>
-          </View>
-        )}
+          );
+        }}
       />
     </SafeAreaView>
   );

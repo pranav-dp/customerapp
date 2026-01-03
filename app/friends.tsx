@@ -153,7 +153,7 @@ export default function FriendsScreen() {
       <FlatList
         data={friends}
         style={{ zIndex: 1 }}
-        keyExtractor={(item) => item.odid}
+        keyExtractor={(item, index) => item.odid || `friend-${index}`}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -162,20 +162,24 @@ export default function FriendsScreen() {
             <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>Search by username to add friends</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={[styles.friendCard, { backgroundColor: colors.white }]}>
-            <View style={[styles.friendAvatar, { backgroundColor: colors.primary }]}>
-              <Text style={[styles.friendAvatarText, { color: colors.white }]}>{item.odname.charAt(0)}</Text>
+        renderItem={({ item }) => {
+          const displayName = item.odname || 'Unknown';
+          const displayUsername = item.username || '';
+          return (
+            <View style={[styles.friendCard, { backgroundColor: colors.white }]}>
+              <View style={[styles.friendAvatar, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.friendAvatarText, { color: colors.white }]}>{displayName.charAt(0)}</Text>
+              </View>
+              <View style={styles.friendInfo}>
+                <Text style={[styles.friendName, { color: colors.textPrimary }]}>{displayName}</Text>
+                <Text style={[styles.friendUsername, { color: colors.textSecondary }]}>@{displayUsername}</Text>
+              </View>
+              <TouchableOpacity onPress={() => handleRemoveFriend(item)} style={styles.removeBtn}>
+                <Ionicons name="close-circle" size={24} color={colors.gray400} />
+              </TouchableOpacity>
             </View>
-            <View style={styles.friendInfo}>
-              <Text style={[styles.friendName, { color: colors.textPrimary }]}>{item.odname}</Text>
-              <Text style={[styles.friendUsername, { color: colors.textSecondary }]}>@{item.username}</Text>
-            </View>
-            <TouchableOpacity onPress={() => handleRemoveFriend(item)} style={styles.removeBtn}>
-              <Ionicons name="close-circle" size={24} color={colors.gray400} />
-            </TouchableOpacity>
-          </View>
-        )}
+          );
+        }}
       />
     </SafeAreaView>
   );
