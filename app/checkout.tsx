@@ -9,8 +9,12 @@ import { textStyles } from '../constants/typography';
 import { useCart, ItemAssignment } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatPrice } from '../utils/restaurant';
-import { createOrder, updateOrderPayment, markOrderPaymentFailed } from '../services/orders';
+import { createOrder, updateOrderPayment } from '../services/orders';
 import { updateOwedAmount } from '../services/friends';
+import { getBudget, addToSpent, Budget } from '../services/budget';
+import { generateTimeSlots, TimeSlot } from '../services/scheduling';
+import { BudgetTracker } from '../components/budget';
+import { ScheduleToggle } from '../components/scheduling';
 import RazorpayService from '../services/razorpay';
 import { Button } from '../components/ui';
 
@@ -29,6 +33,10 @@ export default function CheckoutScreen() {
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [splitEnabled, setSplitEnabled] = useState(false);
+  const [budget, setBudget] = useState<Budget | null>(null);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+  const timeSlots = generateTimeSlots(); // TODO: pass restaurant operating hours
 
   useEffect(() => {
     if (items.length === 0 && !orderPlaced) {
@@ -36,13 +44,26 @@ export default function CheckoutScreen() {
     }
   }, [items.length, orderPlaced]);
 
+  // Fetch budget
+  useEffect(() => {
+    const fetchBudget = async () => {
+      if (!customer?.id) return;
+      const result = await getBudget(customer.id);
+      if (result.success && result.data) {
+        setBudget(result.data);
+      }
+    };
+    fetchBudget();
+  }, [customer?.id]);
+
   // "Me" + friends list
   const allPeople: Friend[] = [
     { id: 'me', name: customer?.name || 'Me' },
-    ...(customer?.friends || []),
+    ...(customer?.friends?.map(f => ({ id: f.odid, name: f.odname })) || []),
   ];
 
   const selectedItem = items.find(i => i.id === selectedItemId);
+  const splitCount = splitEnabled ? Object.keys(getSplitSummary(customer?.name || 'Me')).length : 1;
 
   const handlePlaceOrder = async () => {
     if (!customer || !user) {
@@ -82,12 +103,24 @@ export default function CheckoutScreen() {
         restaurantName,
         items: orderItems,
         totalAmount,
+        isScheduled: scheduleEnabled && selectedSlot !== null,
+        scheduledFor: scheduleEnabled && selectedSlot ? selectedSlot.value : null,
       };
 
       if (splitEnabled) {
         orderData.splitSummary = getSplitSummary(customer.name);
       }
 
+      // Payment FIRST
+      const paymentResponse = await RazorpayService.openPayment({
+        amount: RazorpayService.toPaisa(totalAmount),
+        customerName: customer.name,
+        customerEmail: customer.email,
+        customerPhone: customer.phone || '9999999999',
+        description: `Order at ${restaurantName}`,
+      });
+
+      // Only create order after successful payment
       const orderResult = await createOrder(orderData);
 
       if (!orderResult.success || !orderResult.id) {
@@ -97,20 +130,11 @@ export default function CheckoutScreen() {
       createdOrderId = orderResult.id;
       createdOrderNumber = orderResult.orderNumber!;
 
-      const paymentResponse = await RazorpayService.openPayment({
-        amount: RazorpayService.toPaisa(totalAmount),
-        customerName: customer.name,
-        customerEmail: customer.email,
-        customerPhone: customer.phone || '9999999999',
-        description: `Order #${createdOrderNumber} at ${restaurantName}`,
-      });
-
-      const updateResult = await updateOrderPayment(
+      await updateOrderPayment(
         createdOrderId,
         paymentResponse.razorpay_payment_id,
         paymentResponse.razorpay_order_id
       );
-      console.log('Payment update result:', updateResult);
 
       // Update money owed for friends if split enabled
       if (splitEnabled && customer.id) {
@@ -135,13 +159,10 @@ export default function CheckoutScreen() {
       setTimeout(() => clearCart(), 100);
 
     } catch (error: any) {
-      if (createdOrderId) {
-        await markOrderPaymentFailed(createdOrderId, error.message);
-      }
       if (error.message === 'Payment cancelled') {
         Alert.alert('Payment Cancelled', 'Your order was not placed. Please try again.');
       } else {
-        router.push(`/payment-failed?reason=${encodeURIComponent(error.message || 'Payment could not be completed')}`);
+        Alert.alert('Payment Failed', error.message || 'Payment could not be completed');
       }
     } finally {
       setLoading(false);
@@ -224,9 +245,8 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
-        {/* Split Bill Toggle - Debug: Always show for testing */}
-        {console.log('DEBUG: customer friends:', customer?.friends, 'length:', customer?.friends?.length)}
-        {true && (
+        {/* Split Bill Toggle */}
+        {(customer?.friends?.length ?? 0) > 0 && (
           <TouchableOpacity 
             style={[styles.splitToggle, { backgroundColor: colors.white }]} 
             onPress={() => setSplitEnabled(!splitEnabled)}
@@ -315,6 +335,29 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
+        {/* Schedule Order */}
+        <View style={styles.budgetSection}>
+          <ScheduleToggle
+            enabled={scheduleEnabled}
+            onToggle={(v) => { setScheduleEnabled(v); if (!v) setSelectedSlot(null); }}
+            selectedSlot={selectedSlot}
+            onSelectSlot={setSelectedSlot}
+            slots={timeSlots}
+          />
+        </View>
+
+        {/* Budget Tracker */}
+        {budget && budget.monthlyLimit > 0 && (
+          <View style={styles.budgetSection}>
+            <BudgetTracker 
+              limit={budget.monthlyLimit} 
+              spent={budget.spent} 
+              orderAmount={totalAmount}
+              splitCount={splitCount}
+            />
+          </View>
+        )}
+
         {/* Total */}
         <View style={[styles.section, { backgroundColor: colors.white }]}>
           <View style={[styles.billRow, styles.billTotal]}>
@@ -398,6 +441,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { ...textStyles.h3 },
   section: { marginTop: spacing.sm, padding: spacing.lg },
+  budgetSection: { paddingHorizontal: spacing.lg, marginTop: spacing.sm },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',

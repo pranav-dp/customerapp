@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -8,10 +8,13 @@ import { spacing, borderRadius, shadows } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme, ThemeMode } from '../../contexts/ThemeContext';
+import { useVegFilter } from '../../contexts/VegFilterContext';
 import { useColors } from '../../hooks/useColors';
 import { getCustomerOrders } from '../../services/orders';
 import { getMoneyOwedToMe } from '../../services/friends';
 import { getReviewsByCustomer } from '../../services/reviews';
+import { getBudget, setBudgetLimit } from '../../services/budget';
+import { VegToggle } from '../../components/menu';
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -43,6 +46,7 @@ function MenuItem({ icon, title, subtitle, onPress, showChevron = true, danger =
 export default function ProfileScreen() {
   const { customer, user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { vegFilter, setVegFilter } = useVegFilter();
   const colors = useColors();
   const router = useRouter();
   const [stats, setStats] = useState({ orders: 0, spent: 0 });
@@ -50,6 +54,9 @@ export default function ProfileScreen() {
   const [reviewCount, setReviewCount] = useState(0);
   const [reviewableOrders, setReviewableOrders] = useState<any[]>([]);
   const [showAppearanceModal, setShowAppearanceModal] = useState(false);
+  const [budgetLimit, setBudgetLimitState] = useState(0);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [budgetInput, setBudgetInput] = useState('');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -72,6 +79,12 @@ export default function ProfileScreen() {
     const reviewsResult = await getReviewsByCustomer(user.uid);
     if (reviewsResult.success) {
       setReviewCount(reviewsResult.data.length);
+    }
+    
+    // Fetch budget
+    const budgetResult = await getBudget(user.uid);
+    if (budgetResult.success && budgetResult.data) {
+      setBudgetLimitState(budgetResult.data.monthlyLimit);
     }
   }, [user]);
 
@@ -217,6 +230,25 @@ export default function ProfileScreen() {
         <View style={styles.menuSection}>
           <Text style={[styles.menuSectionTitle, { color: colors.textSecondary }]}>Preferences</Text>
           <View style={[styles.menuCard, { backgroundColor: colors.white }]}>
+            <View style={[styles.menuItem, { borderBottomColor: colors.gray100 }]}>
+              <View style={[styles.menuIconContainer, { backgroundColor: colors.successLight }]}>
+                <Ionicons name="leaf-outline" size={20} color={colors.veg} />
+              </View>
+              <View style={styles.menuContent}>
+                <Text style={[styles.menuTitle, { color: colors.textPrimary }]}>Diet Preference</Text>
+              </View>
+              <VegToggle value={vegFilter} onChange={setVegFilter} compact />
+            </View>
+            <MenuItem
+              icon="wallet-outline"
+              title="Monthly Budget"
+              subtitle={budgetLimit > 0 ? `₹${budgetLimit}` : 'Not set'}
+              onPress={() => {
+                setBudgetInput(budgetLimit > 0 ? String(budgetLimit) : '');
+                setShowBudgetModal(true);
+              }}
+              colors={colors}
+            />
             <MenuItem
               icon="notifications-outline"
               title="Notifications"
@@ -325,6 +357,51 @@ export default function ProfileScreen() {
               onPress={() => setShowAppearanceModal(false)}
             >
               <Text style={[styles.modalCloseBtnText, { color: colors.textPrimary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Budget Modal */}
+      <Modal
+        visible={showBudgetModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBudgetModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowBudgetModal(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colors.white }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Monthly Budget</Text>
+            <Text style={[styles.budgetHint, { color: colors.textSecondary }]}>
+              Set a spending limit to track your monthly food expenses
+            </Text>
+            <View style={[styles.budgetInputRow, { borderColor: colors.gray200 }]}>
+              <Text style={[styles.budgetCurrency, { color: colors.textPrimary }]}>₹</Text>
+              <TextInput
+                style={[styles.budgetInput, { color: colors.textPrimary }]}
+                value={budgetInput}
+                onChangeText={setBudgetInput}
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor={colors.textTertiary}
+              />
+            </View>
+            <TouchableOpacity 
+              style={[styles.budgetSaveBtn, { backgroundColor: colors.primary }]}
+              onPress={async () => {
+                const limit = parseInt(budgetInput) || 0;
+                if (user) {
+                  await setBudgetLimit(user.uid, limit);
+                  setBudgetLimitState(limit);
+                }
+                setShowBudgetModal(false);
+              }}
+            >
+              <Text style={styles.budgetSaveBtnText}>Save</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -511,5 +588,35 @@ const styles = StyleSheet.create({
   },
   modalCloseBtnText: {
     ...textStyles.label,
+  },
+  budgetHint: {
+    ...textStyles.caption,
+    marginBottom: spacing.md,
+  },
+  budgetInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  budgetCurrency: {
+    ...textStyles.h2,
+    marginRight: spacing.xs,
+  },
+  budgetInput: {
+    ...textStyles.h2,
+    flex: 1,
+    paddingVertical: spacing.sm,
+  },
+  budgetSaveBtn: {
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+  },
+  budgetSaveBtnText: {
+    ...textStyles.label,
+    color: '#fff',
   },
 });

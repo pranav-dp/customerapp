@@ -52,7 +52,7 @@ export default function WelcomeScreen() {
           variant="outline"
           onPress={() => router.push('/login')}
           fullWidth
-          style={[styles.loginButton, { backgroundColor: colors.white }]}
+          style={{ ...styles.loginButton, backgroundColor: colors.white }}
         />
         <Button
           title="Sign up"

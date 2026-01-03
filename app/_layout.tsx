@@ -10,6 +10,7 @@ import 'react-native-reanimated';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { CartProvider } from '../contexts/CartContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { VegFilterProvider } from '../contexts/VegFilterContext';
 import { useColors } from '../hooks/useColors';
 import { registerForPushNotifications } from '../services/notifications';
 
@@ -47,6 +48,9 @@ function RootLayoutNav() {
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="insights" />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="treat-room/create" />
+        <Stack.Screen name="treat-room/[id]" />
+        <Stack.Screen name="treat-checkout" />
       </Stack>
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </>
@@ -77,7 +81,9 @@ export default function RootLayout() {
       <ThemeProvider>
         <AuthProvider>
           <CartProvider>
-            <RootLayoutNav />
+            <VegFilterProvider>
+              <RootLayoutNav />
+            </VegFilterProvider>
           </CartProvider>
         </AuthProvider>
       </ThemeProvider>

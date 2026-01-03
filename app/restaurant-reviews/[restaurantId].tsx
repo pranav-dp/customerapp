@@ -5,7 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { spacing, borderRadius } from '../../constants/colors';
+import { colors, spacing, borderRadius } from '../../constants/colors';
 import { useColors } from '../../hooks/useColors';
 import { textStyles } from '../../constants/typography';
 import { getReviewsByRestaurant, Review } from '../../services/reviews';

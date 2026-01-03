@@ -6,14 +6,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, shadows } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { useColors } from '../../hooks/useColors';
+import { useVegFilter } from '../../contexts/VegFilterContext';
 import { getRestaurant } from '../../services/firestore';
 import { getRestaurantStatus, formatPrice, OperatingHours } from '../../utils/restaurant';
-import { MenuItemCard, CategoryTabs, ClosedBanner, MenuItem } from '../../components/menu';
+import { MenuItemCard, CategoryTabs, ClosedBanner, MenuItem, VegToggle, SuggestedComboCard } from '../../components/menu';
 import { CartBar } from '../../components/cart';
 import { Skeleton } from '../../components/ui';
+import { BusynessIndicator } from '../../components/restaurant';
+import { TreatBanner } from '../../components/treat';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { toggleFavorite } from '../../services/friends';
+import { getFriendsWhoOrdered, formatTimeAgo } from '../../services/friendsOrders';
+import { getRestaurantStats, getBusynessInfo, RestaurantStats } from '../../services/busyness';
+import { getSuggestedCombo, SuggestedCombo } from '../../services/suggestions';
+import { getMyActiveTreatRoom, addToTreatCart, TreatRoom } from '../../services/treatMode';
 import { StarRating } from '../../components/StarRating';
 import * as Haptics from 'expo-haptics';
 
@@ -26,20 +33,28 @@ interface Restaurant {
   menu?: MenuItem[];
   rating?: number;
   reviewCount?: number;
+  stats?: RestaurantStats;
 }
 
 export default function RestaurantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const colors = useColors();
+  const { vegFilter, setVegFilter } = useVegFilter();
   const { addItem, restaurantId: cartRestaurantId, totalItems } = useCart();
   const { customer, refreshCustomer } = useAuth();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('All');
-  const [filter, setFilter] = useState<'all' | 'veg' | 'nonveg'>('all');
+  const [friendsOrders, setFriendsOrders] = useState<Record<string, any>>({});
+  const [stats, setStats] = useState<RestaurantStats | null>(null);
+  const [suggestedCombo, setSuggestedCombo] = useState<SuggestedCombo | null>(null);
+  const [activeTreat, setActiveTreat] = useState<TreatRoom | null>(null);
+  const [addToTreat, setAddToTreat] = useState(false); // Toggle: add to treat cart or personal cart
 
   const isFavorite = customer?.favorites?.includes(id || '') || false;
+  const busyness = getBusynessInfo(stats);
+  const inTreatMode = activeTreat && activeTreat.restaurantId === id;
 
   const handleToggleFavorite = async () => {
     if (!customer?.id || !id) return;
@@ -68,10 +83,44 @@ export default function RestaurantDetailScreen() {
       if (result.success && result.data) {
         setRestaurant(result.data as Restaurant);
       }
+      
+      // Fetch busyness stats
+      const statsResult = await getRestaurantStats(id);
+      setStats(statsResult);
       setLoading(false);
     };
     fetchRestaurant();
   }, [id]);
+
+  // Fetch friends' orders for this restaurant
+  useEffect(() => {
+    const fetchFriendsOrders = async () => {
+      if (!id || !customer?.friends?.length) return;
+      const friendIds = customer.friends.map((f: any) => f.odid);
+      const result = await getFriendsWhoOrdered(id, friendIds);
+      if (result.success && result.data) {
+        setFriendsOrders(result.data);
+      }
+    };
+    fetchFriendsOrders();
+  }, [id, customer?.friends]);
+
+  // Fetch suggested combo
+  useEffect(() => {
+    const fetchCombo = async () => {
+      if (!id || !customer?.id) return;
+      const combo = await getSuggestedCombo(customer.id, id);
+      setSuggestedCombo(combo);
+    };
+    fetchCombo();
+  }, [id, customer?.id]);
+
+  // Subscribe to active treat room
+  useEffect(() => {
+    if (!customer?.id) return;
+    const unsub = getMyActiveTreatRoom(customer.id, setActiveTreat);
+    return () => unsub();
+  }, [customer?.id]);
 
   const status = useMemo(() => {
     return getRestaurantStatus(restaurant?.operatingHours);
@@ -83,10 +132,10 @@ export default function RestaurantDetailScreen() {
 
     let items = [...restaurant.menu];
 
-    // Apply veg/nonveg filter
-    if (filter === 'veg') {
-      items = items.filter(item => item.isVeg === true);
-    } else if (filter === 'nonveg') {
+    // Apply veg/nonveg filter (treat undefined/null isVeg as veg for old items)
+    if (vegFilter === 'veg') {
+      items = items.filter(item => item.isVeg !== false);
+    } else if (vegFilter === 'nonveg') {
       items = items.filter(item => item.isVeg === false);
     }
 
@@ -113,14 +162,27 @@ export default function RestaurantDetailScreen() {
     });
 
     return { categories: uniqueCategories, filteredMenu: items, itemCounts: counts };
-  }, [restaurant?.menu, activeCategory, filter]);
+  }, [restaurant?.menu, activeCategory, vegFilter]);
 
-  const handleAddToCart = (item: MenuItem) => {
+  const handleAddToCart = async (item: MenuItem) => {
     if (!status.isOpen) {
       Alert.alert('Restaurant Closed', status.message);
       return;
     }
     if (!restaurant) return;
+    
+    // If toggle is on "For Treat" and in treat mode, add to treat cart
+    if (addToTreat && inTreatMode && activeTreat && customer) {
+      await addToTreatCart(activeTreat.id, {
+        itemId: item.id,
+        name: item.name,
+        price: item.price,
+        isVeg: item.isVeg ?? true,
+        addedBy: { id: customer.id, name: customer.name },
+      });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      return;
+    }
     
     // Warn if adding from different restaurant
     if (cartRestaurantId && cartRestaurantId !== restaurant.id) {
@@ -236,8 +298,13 @@ export default function RestaurantDetailScreen() {
                 {status.isOpen ? 'Open' : 'Closed'}
               </Text>
             </View>
-            <Text style={[styles.statusMessage, { color: colors.textSecondary }]}>{status.message}</Text>
+            {status.isOpen && (
+              <BusynessIndicator level={busyness.level} label={busyness.label} waitTime={busyness.waitTime} compact />
+            )}
           </View>
+          {status.isOpen && (
+            <Text style={[styles.statusMessage, { color: colors.textSecondary }]}>{status.message}</Text>
+          )}
 
           {/* Menu Stats */}
           <View style={styles.statsRow}>
@@ -253,39 +320,61 @@ export default function RestaurantDetailScreen() {
           </View>
         </View>
 
+        {/* Treat Banner */}
+        {inTreatMode && activeTreat && (
+          <TreatBanner room={activeTreat} isHost={activeTreat.hostId === customer?.id} />
+        )}
+
+        {/* Start Treat Button */}
+        {!inTreatMode && status.isOpen && (
+          <TouchableOpacity 
+            style={[styles.treatButton, { backgroundColor: colors.warningLight, borderColor: colors.warning }]}
+            onPress={() => {
+              if ((customer?.friends?.length ?? 0) === 0) {
+                Alert.alert('Add Friends First', 'You need friends to start a treat!', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Add Friends', onPress: () => router.push('/friends') }
+                ]);
+                return;
+              }
+              router.push({ pathname: '/treat-room/create' as any, params: { restaurantId: id, restaurantName: restaurant?.name } });
+            }}
+          >
+            <Ionicons name="gift" size={18} color={colors.warning} />
+            <Text style={[styles.treatButtonText, { color: colors.warning }]}>Start a Treat</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Closed Banner */}
         <ClosedBanner status={status} />
 
         {/* Filters & Categories - Sticky */}
         <View style={[styles.filtersContainer, { backgroundColor: colors.white, borderBottomColor: colors.gray100 }]}>
+          {/* Treat Mode Toggle */}
+          {inTreatMode && (
+            <View style={[styles.treatToggleContainer, { borderBottomColor: colors.gray100 }]}>
+              <Text style={[styles.treatToggleLabel, { color: colors.textSecondary }]}>Add items to:</Text>
+              <View style={[styles.treatToggle, { backgroundColor: colors.gray100 }]}>
+                <TouchableOpacity 
+                  style={[styles.treatToggleBtn, !addToTreat && { backgroundColor: colors.success }]}
+                  onPress={() => setAddToTreat(false)}
+                >
+                  <Text style={[styles.treatToggleBtnText, { color: !addToTreat ? '#fff' : colors.textSecondary }]}>For Me</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.treatToggleBtn, addToTreat && { backgroundColor: colors.warning }]}
+                  onPress={() => setAddToTreat(true)}
+                >
+                  <Ionicons name="gift" size={14} color={addToTreat ? '#fff' : colors.textSecondary} />
+                  <Text style={[styles.treatToggleBtnText, { color: addToTreat ? '#fff' : colors.textSecondary }]}>For Treat</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {/* Veg/Non-veg Filter */}
           <View style={styles.vegFilters}>
-            <TouchableOpacity
-              style={[
-                styles.vegFilterButton, 
-                { borderColor: colors.gray200, backgroundColor: colors.white },
-                filter === 'veg' && { borderColor: colors.veg, backgroundColor: colors.successLight }
-              ]}
-              onPress={() => setFilter(filter === 'veg' ? 'all' : 'veg')}
-            >
-              <View style={[styles.vegIndicator, { borderColor: colors.veg }]}>
-                <View style={[styles.vegDot, { backgroundColor: colors.veg }]} />
-              </View>
-              <Text style={[styles.vegFilterText, { color: filter === 'veg' ? colors.veg : colors.textSecondary }]}>Veg</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.vegFilterButton, 
-                { borderColor: colors.gray200, backgroundColor: colors.white },
-                filter === 'nonveg' && { borderColor: colors.nonVeg, backgroundColor: colors.errorLight }
-              ]}
-              onPress={() => setFilter(filter === 'nonveg' ? 'all' : 'nonveg')}
-            >
-              <View style={[styles.vegIndicator, { borderColor: colors.nonVeg }]}>
-                <View style={[styles.vegDot, { backgroundColor: colors.nonVeg }]} />
-              </View>
-              <Text style={[styles.vegFilterText, { color: filter === 'nonveg' ? colors.nonVeg : colors.textSecondary }]}>Non-veg</Text>
-            </TouchableOpacity>
+            <VegToggle value={vegFilter} onChange={setVegFilter} />
           </View>
 
           {/* Category Tabs */}
@@ -299,32 +388,53 @@ export default function RestaurantDetailScreen() {
 
         {/* Menu Items */}
         <View style={[styles.menuContainer, totalItems > 0 && { paddingBottom: 100 }]}>
+          {/* Suggested Combo */}
+          {suggestedCombo && activeCategory === 'All' && (
+            <SuggestedComboCard
+              combo={suggestedCombo}
+              onAdd={() => {
+                suggestedCombo.items.forEach(item => {
+                  const menuItem = restaurant?.menu?.find(m => m.id === item.id);
+                  if (menuItem) handleAddToCart(menuItem);
+                });
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }}
+            />
+          )}
+          
           {filteredMenu.length === 0 ? (
             <View style={styles.emptyMenu}>
               <Ionicons name="restaurant-outline" size={48} color={colors.gray300} />
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No items found</Text>
-              {filter !== 'all' && (
-                <TouchableOpacity onPress={() => setFilter('all')}>
+              {vegFilter !== 'all' && (
+                <TouchableOpacity onPress={() => setVegFilter('all')}>
                   <Text style={[styles.clearFilterText, { color: colors.primary }]}>Clear filters</Text>
                 </TouchableOpacity>
               )}
             </View>
           ) : (
-            filteredMenu.map((item) => (
-              <MenuItemCard
-                key={item.id}
-                item={item}
-                onPress={() => {/* TODO: Item detail modal */}}
-                onAddToCart={() => handleAddToCart(item)}
-                disabled={!status.isOpen}
-              />
-            ))
+            filteredMenu.map((item) => {
+              const friendOrder = friendsOrders[item.id];
+              return (
+                <MenuItemCard
+                  key={item.id}
+                  item={item}
+                  onPress={() => {/* TODO: Item detail modal */}}
+                  onAddToCart={() => handleAddToCart(item)}
+                  disabled={!status.isOpen}
+                  friendBought={friendOrder ? { 
+                    friendName: friendOrder.friendName, 
+                    timeAgo: formatTimeAgo(friendOrder.orderedAt) 
+                  } : null}
+                />
+              );
+            })
           )}
         </View>
       </ScrollView>
 
       {/* Floating Cart Bar */}
-      <CartBar />
+      <CartBar treatRoom={inTreatMode ? activeTreat : null} />
     </SafeAreaView>
   );
 }
@@ -440,34 +550,9 @@ const styles = StyleSheet.create({
   },
   vegFilters: {
     flexDirection: 'row',
+    justifyContent: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    gap: spacing.sm,
-  },
-  vegFilterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-  },
-  vegIndicator: {
-    width: 14,
-    height: 14,
-    borderWidth: 1.5,
-    borderRadius: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.xs,
-  },
-  vegDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  vegFilterText: {
-    ...textStyles.labelSmall,
   },
   menuContainer: {
     paddingHorizontal: spacing.xl,
@@ -483,5 +568,48 @@ const styles = StyleSheet.create({
   clearFilterText: {
     ...textStyles.label,
     marginTop: spacing.md,
+  },
+  treatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+  },
+  treatButtonText: {
+    ...textStyles.label,
+    fontWeight: '600',
+  },
+  treatToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+  },
+  treatToggleLabel: {
+    ...textStyles.caption,
+  },
+  treatToggle: {
+    flexDirection: 'row',
+    borderRadius: borderRadius.full,
+    padding: 2,
+  },
+  treatToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+  },
+  treatToggleBtnText: {
+    ...textStyles.caption,
+    fontWeight: '600',
   },
 });

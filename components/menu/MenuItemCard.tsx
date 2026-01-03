@@ -5,6 +5,7 @@ import { spacing, borderRadius, shadows } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { useColors } from '../../hooks/useColors';
 import { formatPrice } from '../../utils/restaurant';
+import { FriendBoughtBadge } from './FriendBoughtBadge';
 
 export interface MenuItem {
   id: string;
@@ -23,12 +24,14 @@ interface MenuItemCardProps {
   item: MenuItem;
   onPress: () => void;
   onAddToCart: () => void;
-  disabled?: boolean; // When restaurant is closed
+  disabled?: boolean;
+  friendBought?: { friendName: string; timeAgo: string } | null;
 }
 
-export default function MenuItemCard({ item, onPress, onAddToCart, disabled = false }: MenuItemCardProps) {
+export default function MenuItemCard({ item, onPress, onAddToCart, disabled = false, friendBought }: MenuItemCardProps) {
   const colors = useColors();
   const isUnavailable = !item.isAvailable || disabled;
+  const isVeg = item.isVeg !== false;
 
   return (
     <TouchableOpacity 
@@ -39,8 +42,8 @@ export default function MenuItemCard({ item, onPress, onAddToCart, disabled = fa
     >
       <View style={styles.content}>
         {/* Veg/Non-veg indicator */}
-        <View style={[styles.vegIndicator, { borderColor: item.isVeg ? colors.veg : colors.nonVeg }]}>
-          <View style={[styles.vegDot, { backgroundColor: item.isVeg ? colors.veg : colors.nonVeg }]} />
+        <View style={[styles.vegIndicator, { borderColor: isVeg ? colors.veg : colors.nonVeg }]}>
+          <View style={[styles.vegDot, { backgroundColor: isVeg ? colors.veg : colors.nonVeg }]} />
         </View>
 
         <Text style={[styles.name, { color: colors.textPrimary }, isUnavailable && { color: colors.textDisabled }]} numberOfLines={2}>
@@ -56,6 +59,11 @@ export default function MenuItemCard({ item, onPress, onAddToCart, disabled = fa
         <Text style={[styles.price, { color: colors.textPrimary }, isUnavailable && { color: colors.textDisabled }]}>
           {formatPrice(item.price)}
         </Text>
+
+        {/* Friend bought badge */}
+        {friendBought && !isUnavailable && (
+          <FriendBoughtBadge friendName={friendBought.friendName} timeAgo={friendBought.timeAgo} />
+        )}
 
         {/* Item Rating */}
         {item.rating !== undefined && item.rating > 0 && (

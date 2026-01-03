@@ -14,6 +14,7 @@ export interface OrderItem {
   quantity: number;
   isVeg?: boolean;
   assignments?: ItemAssignment[];
+  addedBy?: string; // For treat orders - who added this item
 }
 
 export interface Order {
@@ -34,6 +35,11 @@ export interface Order {
   splitSummary?: Record<string, number>;
   isReviewed?: boolean;
   reviewId?: string;
+  isScheduled?: boolean;
+  scheduledFor?: Date | null;
+  isTreat?: boolean;
+  treatHostName?: string;
+  treatParticipants?: string[];
   createdAt: Date;
   updatedAt: Date;
 }

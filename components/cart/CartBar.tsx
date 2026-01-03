@@ -8,13 +8,21 @@ import { textStyles } from '../../constants/typography';
 import { useCart } from '../../contexts/CartContext';
 import { useColors } from '../../hooks/useColors';
 import { formatPrice } from '../../utils/restaurant';
+import { TreatRoom } from '../../services/treatMode';
 
-export default function CartBar() {
+interface Props {
+  treatRoom?: TreatRoom | null;
+}
+
+export default function CartBar({ treatRoom }: Props) {
   const router = useRouter();
   const colors = useColors();
   const { totalItems, totalAmount, restaurantName } = useCart();
 
-  if (totalItems === 0) return null;
+  const hasTreatItems = treatRoom && treatRoom.cart.length > 0;
+  const hasPersonalItems = totalItems > 0;
+
+  if (!hasPersonalItems && !hasTreatItems) return null;
 
   return (
     <Animated.View 
@@ -22,28 +30,56 @@ export default function CartBar() {
       entering={FadeInDown.duration(200)}
       exiting={FadeOutDown.duration(200)}
     >
-      <TouchableOpacity 
-        style={[styles.bar, { backgroundColor: colors.success }, shadows.lg]} 
-        onPress={() => router.push('/cart')}
-        activeOpacity={0.9}
-      >
-        <View style={styles.left}>
-          <View style={[styles.badge, { backgroundColor: colors.white }]}>
-            <Text style={[styles.badgeText, { color: colors.success }]}>{totalItems}</Text>
+      {/* Treat Cart Bar */}
+      {hasTreatItems && (
+        <TouchableOpacity 
+          style={[styles.bar, styles.treatBar, { backgroundColor: colors.warning }, shadows.lg]} 
+          onPress={() => router.push(`/treat-room/${treatRoom.id}` as any)}
+          activeOpacity={0.9}
+        >
+          <View style={styles.left}>
+            <View style={[styles.badge, { backgroundColor: colors.white }]}>
+              <Ionicons name="gift" size={14} color={colors.warning} />
+            </View>
+            <View style={styles.info}>
+              <Text style={[styles.itemCount, { color: colors.white }]}>
+                Treat · {treatRoom.cart.reduce((sum, i) => sum + i.quantity, 0)} items
+              </Text>
+              <Text style={styles.restaurant} numberOfLines={1}>{treatRoom.restaurantName}</Text>
+            </View>
           </View>
-          <View style={styles.info}>
-            <Text style={[styles.itemCount, { color: colors.white }]}>
-              {totalItems} {totalItems === 1 ? 'item' : 'items'}
-            </Text>
-            <Text style={styles.restaurant} numberOfLines={1}>{restaurantName}</Text>
+          <View style={styles.right}>
+            <Text style={[styles.total, { color: colors.white }]}>₹{treatRoom.totalAmount}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.white} />
           </View>
-        </View>
-        <View style={styles.right}>
-          <Text style={[styles.total, { color: colors.white }]}>{formatPrice(totalAmount)}</Text>
-          <Text style={[styles.viewCart, { color: colors.white }]}>View Cart</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.white} />
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
+      {/* Personal Cart Bar */}
+      {hasPersonalItems && (
+        <TouchableOpacity 
+          style={[styles.bar, { backgroundColor: colors.success }, shadows.lg]} 
+          onPress={() => router.push('/cart')}
+          activeOpacity={0.9}
+        >
+          <View style={styles.left}>
+            <View style={[styles.badge, { backgroundColor: colors.white }]}>
+              <Text style={[styles.badgeText, { color: colors.success }]}>{totalItems}</Text>
+            </View>
+            <View style={styles.info}>
+              <Text style={[styles.itemCount, { color: colors.white }]}>
+                {totalItems} {totalItems === 1 ? 'item' : 'items'}
+              </Text>
+              <Text style={styles.restaurant} numberOfLines={1}>{restaurantName}</Text>
+            </View>
+          </View>
+          <View style={styles.right}>
+            <Text style={[styles.total, { color: colors.white }]}>{formatPrice(totalAmount)}</Text>
+            <Text style={[styles.viewCart, { color: colors.white }]}>View Cart</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.white} />
+          </View>
+        </TouchableOpacity>
+      )}
     </Animated.View>
   );
 }
@@ -56,6 +92,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl + 10,
+    gap: spacing.sm,
   },
   bar: {
     flexDirection: 'row',
@@ -64,6 +101,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
+  },
+  treatBar: {
+    paddingVertical: spacing.sm,
   },
   left: {
     flexDirection: 'row',

@@ -27,7 +27,7 @@ export default function FriendsScreen() {
 
   const friends = customer?.friends || [];
   const owes = customer?.owes || {};
-  const friendIds = friends.map(f => f.id).join(','); // Stable reference for useEffect
+  const friendIds = friends.map(f => f.odid).join(','); // Stable reference for useEffect
 
   // Search users by username
   useEffect(() => {
@@ -38,10 +38,10 @@ export default function FriendsScreen() {
       }
       setSearching(true);
       const result = await searchUsersByUsername(searchQuery);
-      if (result.success) {
+      if (result.success && result.data) {
         // Filter out self and existing friends
-        const filtered = result.data.filter(
-          (u: UserResult) => u.id !== customer?.id && !friends.some(f => f.id === u.id)
+        const filtered = (result.data as UserResult[]).filter(
+          (u) => u.id !== customer?.id && !friends.some(f => f.odid === u.id)
         );
         setSearchResults(filtered);
       }
@@ -54,7 +54,7 @@ export default function FriendsScreen() {
   const handleAddFriend = async (user: UserResult) => {
     if (!customer?.id) return;
     try {
-      const friendData = { id: user.id, name: user.name, username: user.username };
+      const friendData = { odid: user.id, odname: user.name, username: user.username };
       await updateDoc(doc(db, 'customers', customer.id), {
         friends: arrayUnion(friendData),
       });
@@ -153,7 +153,7 @@ export default function FriendsScreen() {
       <FlatList
         data={friends}
         style={{ zIndex: 1 }}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.odid}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -165,10 +165,10 @@ export default function FriendsScreen() {
         renderItem={({ item }) => (
           <View style={[styles.friendCard, { backgroundColor: colors.white }]}>
             <View style={[styles.friendAvatar, { backgroundColor: colors.primary }]}>
-              <Text style={[styles.friendAvatarText, { color: colors.white }]}>{item.name.charAt(0)}</Text>
+              <Text style={[styles.friendAvatarText, { color: colors.white }]}>{item.odname.charAt(0)}</Text>
             </View>
             <View style={styles.friendInfo}>
-              <Text style={[styles.friendName, { color: colors.textPrimary }]}>{item.name}</Text>
+              <Text style={[styles.friendName, { color: colors.textPrimary }]}>{item.odname}</Text>
               <Text style={[styles.friendUsername, { color: colors.textSecondary }]}>@{item.username}</Text>
             </View>
             <TouchableOpacity onPress={() => handleRemoveFriend(item)} style={styles.removeBtn}>

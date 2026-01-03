@@ -189,6 +189,21 @@ export default function OrderDetailScreen() {
           </View>
         </View>
 
+        {/* Treat Info */}
+        {order.isTreat && (
+          <View style={[styles.section, styles.treatSection, { backgroundColor: colors.warningLight }]}>
+            <View style={styles.treatHeader}>
+              <Ionicons name="gift" size={20} color={colors.warning} />
+              <Text style={[styles.treatTitle, { color: colors.warning }]}>Treat by {order.treatHostName}</Text>
+            </View>
+            {order.treatParticipants && order.treatParticipants.length > 0 && (
+              <Text style={[styles.treatParticipants, { color: colors.textSecondary }]}>
+                For: {order.treatParticipants.join(', ')}
+              </Text>
+            )}
+          </View>
+        )}
+
         {/* Items */}
         <View style={[styles.section, { backgroundColor: colors.white }]}>
           <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Order Items</Text>
@@ -197,7 +212,12 @@ export default function OrderDetailScreen() {
               <View style={[styles.vegIndicator, { borderColor: item.isVeg ? colors.veg : colors.nonVeg }]}>
                 <View style={[styles.vegDot, { backgroundColor: item.isVeg ? colors.veg : colors.nonVeg }]} />
               </View>
-              <Text style={[styles.itemName, { color: colors.textPrimary }]}>{item.name}</Text>
+              <View style={styles.itemInfo}>
+                <Text style={[styles.itemName, { color: colors.textPrimary }]}>{item.name}</Text>
+                {item.addedBy && (
+                  <Text style={[styles.itemAddedBy, { color: colors.textTertiary }]}>Added by {item.addedBy}</Text>
+                )}
+              </View>
               <Text style={[styles.itemQty, { color: colors.textSecondary }]}>x{item.quantity}</Text>
               <Text style={[styles.itemPrice, { color: colors.textPrimary }]}>{formatPrice(item.price * item.quantity)}</Text>
             </View>
@@ -407,10 +427,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   vegDot: { width: 7, height: 7, borderRadius: 3.5 },
-  itemName: {
-    ...textStyles.body,
+  itemInfo: {
     flex: 1,
     marginLeft: spacing.sm,
+  },
+  itemName: {
+    ...textStyles.body,
+  },
+  itemAddedBy: {
+    ...textStyles.caption,
+    marginTop: 2,
   },
   itemQty: {
     ...textStyles.body,
@@ -418,6 +444,23 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     ...textStyles.label,
+  },
+  treatSection: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  treatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  treatTitle: {
+    ...textStyles.label,
+    fontWeight: '600',
+  },
+  treatParticipants: {
+    ...textStyles.caption,
+    marginTop: spacing.xs,
   },
   totalRow: {
     flexDirection: 'row',

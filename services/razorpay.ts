@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 
 let RazorpayCheckout: any = null;
 
@@ -18,10 +18,11 @@ function loadRazorpayModule() {
 }
 
 const RAZORPAY_KEY = process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || '';
+const DEV_MODE = __DEV__; // Skip real payment in development
 
 export interface PaymentOptions {
-  orderId?: string; // Optional - only needed for production with backend
-  amount: number; // in paisa (₹100 = 10000)
+  orderId?: string;
+  amount: number;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -41,6 +42,24 @@ class RazorpayService {
   }
 
   async openPayment(options: PaymentOptions): Promise<PaymentResponse> {
+    // Dev mode - simulate payment
+    if (DEV_MODE && !this.isAvailable()) {
+      return new Promise((resolve, reject) => {
+        Alert.alert(
+          'Dev Mode Payment',
+          `Pay ₹${options.amount / 100}?`,
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => reject(new Error('Payment cancelled')) },
+            { text: 'Pay', onPress: () => resolve({
+              razorpay_payment_id: `dev_pay_${Date.now()}`,
+              razorpay_order_id: `dev_order_${Date.now()}`,
+              razorpay_signature: 'dev_signature',
+            })},
+          ]
+        );
+      });
+    }
+
     return new Promise((resolve, reject) => {
       if (!this.isAvailable()) {
         reject(new Error('Payment not available. Please use a physical device with a proper build.'));
@@ -66,31 +85,8 @@ class RazorpayService {
           contact: options.customerPhone,
         },
         theme: { color: '#FFBC0D' },
-        config: {
-          display: {
-            blocks: {
-              upi: {
-                name: 'Pay via UPI',
-                instruments: [
-                  { method: 'upi', flows: ['intent', 'collect'] }
-                ]
-              },
-              other: {
-                name: 'Other Payment Methods',
-                instruments: [
-                  { method: 'card' },
-                  { method: 'netbanking' },
-                  { method: 'wallet' }
-                ]
-              }
-            },
-            sequence: ['block.upi', 'block.other'],
-            preferences: { show_default_blocks: false }
-          }
-        }
       };
       
-      // Only add order_id if provided (production with backend)
       if (options.orderId) {
         checkoutOptions.order_id = options.orderId;
       }
@@ -107,7 +103,6 @@ class RazorpayService {
     });
   }
 
-  // Convert rupees to paisa
   toPaisa(rupees: number): number {
     return Math.round(rupees * 100);
   }

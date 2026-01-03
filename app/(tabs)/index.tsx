@@ -7,9 +7,13 @@ import { spacing, borderRadius, shadows } from '../../constants/colors';
 import { textStyles } from '../../constants/typography';
 import { useAuth } from '../../contexts/AuthContext';
 import { useColors } from '../../hooks/useColors';
+import { useVegFilter } from '../../contexts/VegFilterContext';
 import { getRestaurants } from '../../services/firestore';
 import { getRestaurantStatus, OperatingHours } from '../../utils/restaurant';
 import { Skeleton } from '../../components/ui';
+import { VegToggle } from '../../components/menu';
+import { TreatInviteCard } from '../../components/treat';
+import { getMyTreatInvites, respondToInvite, TreatRoom } from '../../services/treatMode';
 
 interface Restaurant {
   id: string;
@@ -78,11 +82,13 @@ export default function HomeScreen() {
   const { customer } = useAuth();
   const colors = useColors();
   const router = useRouter();
+  const { vegFilter, setVegFilter } = useVegFilter();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [treatInvites, setTreatInvites] = useState<TreatRoom[]>([]);
 
   const firstName = customer?.name?.split(' ')[0] || 'there';
 
@@ -104,6 +110,13 @@ export default function HomeScreen() {
     fetchData();
   }, []);
 
+  // Subscribe to treat invites
+  useEffect(() => {
+    if (!customer?.id) return;
+    const unsub = getMyTreatInvites(customer.id, setTreatInvites);
+    return () => unsub();
+  }, [customer?.id]);
+
   // Search through all menu items
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -118,14 +131,20 @@ export default function HomeScreen() {
       if (!status.isOpen) return; // Only search open restaurants
       
       restaurant.menu?.forEach(item => {
-        if (item.isAvailable && item.name.toLowerCase().includes(query)) {
-          results.push({ item, restaurant });
-        }
+        if (!item.isAvailable) return;
+        if (!item.name.toLowerCase().includes(query)) return;
+        
+        // Apply veg filter (treat undefined/null as veg for old items)
+        const itemIsVeg = item.isVeg !== false;
+        if (vegFilter === 'veg' && !itemIsVeg) return;
+        if (vegFilter === 'nonveg' && itemIsVeg) return;
+        
+        results.push({ item, restaurant });
       });
     });
     
     setSearchResults(results.slice(0, 20)); // Limit results
-  }, [searchQuery, restaurants]);
+  }, [searchQuery, restaurants, vegFilter]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -137,7 +156,7 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={[styles.greeting, { color: colors.textPrimary }]}>Hi, {firstName}! 👋</Text>
+            <Text style={[styles.greeting, { color: colors.textPrimary }]}>Hi, {firstName}</Text>
             <Text style={[styles.subGreeting, { color: colors.textSecondary }]}>What would you like to eat?</Text>
           </View>
           <TouchableOpacity style={[styles.notificationButton, { backgroundColor: colors.gray100 }]}>
@@ -165,9 +184,12 @@ export default function HomeScreen() {
         {/* Search Results */}
         {searchQuery.length > 0 ? (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-              {searchResults.length > 0 ? `Found ${searchResults.length} items` : 'No items found'}
-            </Text>
+            <View style={styles.searchResultsHeader}>
+              <Ionicons name="search-outline" size={14} color={colors.textTertiary} />
+              <Text style={[styles.searchResultsCount, { color: colors.textTertiary }]}>
+                {searchResults.length > 0 ? `${searchResults.length} items found` : 'No items found'}
+              </Text>
+            </View>
             {searchResults.map((result, index) => (
               <TouchableOpacity
                 key={`${result.restaurant.id}-${result.item.id}-${index}`}
@@ -175,8 +197,8 @@ export default function HomeScreen() {
                 onPress={() => router.push(`/restaurant/${result.restaurant.id}`)}
               >
                 <View style={styles.searchResultLeft}>
-                  <View style={[styles.vegIndicator, { borderColor: result.item.isVeg ? colors.veg : colors.nonVeg }]}>
-                    <View style={[styles.vegDot, { backgroundColor: result.item.isVeg ? colors.veg : colors.nonVeg }]} />
+                  <View style={[styles.vegIndicator, { borderColor: result.item.isVeg === false ? colors.nonVeg : colors.veg }]}>
+                    <View style={[styles.vegDot, { backgroundColor: result.item.isVeg === false ? colors.nonVeg : colors.veg }]} />
                   </View>
                   <View style={styles.searchResultInfo}>
                     <Text style={[styles.searchResultName, { color: colors.textPrimary }]}>{result.item.name}</Text>
@@ -189,31 +211,22 @@ export default function HomeScreen() {
           </View>
         ) : (
           <>
+        {/* Treat Invites */}
+        {treatInvites.map(invite => (
+          <View key={invite.id} style={{ paddingHorizontal: spacing.md }}>
+            <TreatInviteCard
+              invite={invite}
+              onAccept={async () => {
+                await respondToInvite(invite.id, customer!.id, true);
+                router.push(`/treat-room/${invite.id}` as any);
+              }}
+              onDecline={() => respondToInvite(invite.id, customer!.id, false)}
+            />
+          </View>
+        ))}
+
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.quickActionItem}>
-            <View style={[styles.quickActionIcon, { backgroundColor: colors.primaryLight }]}>
-              <Ionicons name="fast-food" size={24} color={colors.primary} />
-            </View>
-            <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionItem}>
-            <View style={[styles.quickActionIcon, { backgroundColor: colors.successLight }]}>
-              <Ionicons name="leaf" size={24} color={colors.veg} />
-            </View>
-            <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>Veg</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionItem}>
-            <View style={[styles.quickActionIcon, { backgroundColor: colors.errorLight }]}>
-              <Ionicons name="nutrition" size={24} color={colors.nonVeg} />
-            </View>
-            <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>Non-Veg</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionItem}>
-            <View style={[styles.quickActionIcon, { backgroundColor: colors.warningLight }]}>
-              <Ionicons name="cafe" size={24} color={colors.warning} />
-            </View>
-            <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>Drinks</Text>
-          </TouchableOpacity>
+          <VegToggle value={vegFilter} onChange={setVegFilter} />
         </View>
 
         {/* Restaurants Section */}
@@ -315,6 +328,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
   },
+  searchResultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  searchResultsCount: {
+    ...textStyles.caption,
+  },
   searchResultLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -344,23 +366,9 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  quickActionItem: {
-    alignItems: 'center',
-  },
-  quickActionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  quickActionText: {
-    ...textStyles.labelSmall,
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.xl,
   },
   section: {
     paddingHorizontal: spacing.xl,
