@@ -1,9 +1,10 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, borderRadius } from '../../constants/colors';
 import { useColors } from '../../hooks/useColors';
@@ -26,8 +27,8 @@ const RATING_FILTERS: { key: RatingFilter; label: string }[] = [
 ];
 
 export default function RestaurantReviewsScreen() {
-  const { restaurantId, restaurantName, rating, reviewCount } = useLocalSearchParams<{ 
-    restaurantId: string; 
+  const { restaurantId, restaurantName, rating, reviewCount } = useLocalSearchParams<{
+    restaurantId: string;
     restaurantName: string;
     rating: string;
     reviewCount: string;
@@ -38,10 +39,16 @@ export default function RestaurantReviewsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>('all');
   const [sortBy, setSortBy] = useState<SortType>('recent');
+  const [selectedReview, setSelectedReview] = useState<Review | null>(null);
+
+  const handleReviewPress = (review: Review) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedReview(review);
+  };
 
   const fetchReviews = useCallback(async () => {
     if (!restaurantId) return;
-    
+
     const result = await getReviewsByRestaurant(restaurantId);
     if (result.success) {
       setReviews(result.data);
@@ -77,8 +84,8 @@ export default function RestaurantReviewsScreen() {
     .sort((a, b) => {
       const dateA = a.createdAt instanceof Date ? a.createdAt : (a.createdAt as any)?.toDate?.() || new Date();
       const dateB = b.createdAt instanceof Date ? b.createdAt : (b.createdAt as any)?.toDate?.() || new Date();
-      return sortBy === 'recent' 
-        ? dateB.getTime() - dateA.getTime() 
+      return sortBy === 'recent'
+        ? dateB.getTime() - dateA.getTime()
         : dateA.getTime() - dateB.getTime();
     });
 
@@ -103,8 +110,8 @@ export default function RestaurantReviewsScreen() {
 
       {/* Rating Filters */}
       <View style={styles.filtersContainer}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersContent}
         >
@@ -129,10 +136,10 @@ export default function RestaurantReviewsScreen() {
           style={[styles.sortBtn, sortBy === 'recent' && styles.sortBtnActive]}
           onPress={() => handleSortChange('recent')}
         >
-          <Ionicons 
-            name="arrow-down" 
-            size={14} 
-            color={sortBy === 'recent' ? colors.white : colors.textSecondary} 
+          <Ionicons
+            name="arrow-down"
+            size={14}
+            color={sortBy === 'recent' ? colors.white : colors.textSecondary}
           />
           <Text style={[styles.sortText, sortBy === 'recent' && styles.sortTextActive]}>
             Most Recent
@@ -142,10 +149,10 @@ export default function RestaurantReviewsScreen() {
           style={[styles.sortBtn, sortBy === 'oldest' && styles.sortBtnActive]}
           onPress={() => handleSortChange('oldest')}
         >
-          <Ionicons 
-            name="arrow-up" 
-            size={14} 
-            color={sortBy === 'oldest' ? colors.white : colors.textSecondary} 
+          <Ionicons
+            name="arrow-up"
+            size={14}
+            color={sortBy === 'oldest' ? colors.white : colors.textSecondary}
           />
           <Text style={[styles.sortText, sortBy === 'oldest' && styles.sortTextActive]}>
             Oldest First
@@ -153,7 +160,7 @@ export default function RestaurantReviewsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
@@ -169,7 +176,7 @@ export default function RestaurantReviewsScreen() {
             <Ionicons name="chatbubble-outline" size={64} color={colors.gray300} />
             <Text style={styles.emptyTitle}>No reviews found</Text>
             <Text style={styles.emptyText}>
-              {ratingFilter !== 'all' 
+              {ratingFilter !== 'all'
                 ? `No ${ratingFilter}★ reviews found. Try a different filter.`
                 : 'Be the first to review this restaurant!'}
             </Text>
@@ -181,11 +188,84 @@ export default function RestaurantReviewsScreen() {
               {ratingFilter !== 'all' && ` with ${ratingFilter}★`}
             </Text>
             {filteredAndSortedReviews.map(review => (
-              <ReviewCard key={review.id} review={review} showRestaurantName={false} />
+              <ReviewCard key={review.id} review={review} showRestaurantName={false} onPress={() => handleReviewPress(review)} />
             ))}
           </>
         )}
       </ScrollView>
+
+      {/* Review Detail Modal */}
+      <Modal visible={!!selectedReview} transparent animationType="slide" onRequestClose={() => setSelectedReview(null)}>
+        <View style={detailStyles.overlay}>
+          <TouchableOpacity style={detailStyles.backdrop} activeOpacity={1} onPress={() => setSelectedReview(null)} />
+          <View style={[detailStyles.sheet, { backgroundColor: colors.white }]}>
+            <View style={detailStyles.handle} />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={detailStyles.content}>
+              {selectedReview && (() => {
+                const reviewDate = selectedReview.createdAt instanceof Date
+                  ? selectedReview.createdAt
+                  : (selectedReview.createdAt as any)?.toDate?.() || new Date();
+                return (
+                  <>
+                    {/* Header */}
+                    <View style={detailStyles.header}>
+                      <View style={[detailStyles.avatar, { backgroundColor: colors.primary }]}>
+                        <Text style={[detailStyles.avatarText, { color: colors.black }]}>
+                          {selectedReview.customerName?.charAt(0).toUpperCase() || 'U'}
+                        </Text>
+                      </View>
+                      <View style={detailStyles.userInfo}>
+                        <Text style={[detailStyles.customerName, { color: colors.textPrimary }]}>{selectedReview.customerName}</Text>
+                        <Text style={[detailStyles.username, { color: colors.textTertiary }]}>@{selectedReview.username}</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => setSelectedReview(null)}>
+                        <Ionicons name="close" size={24} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Rating & Date */}
+                    <View style={detailStyles.ratingRow}>
+                      <StarRating rating={selectedReview.rating} size={22} readonly />
+                      <Text style={[detailStyles.dateText, { color: colors.textTertiary }]}>
+                        {reviewDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </Text>
+                    </View>
+
+                    {/* Description */}
+                    {selectedReview.description ? (
+                      <Text style={[detailStyles.description, { color: colors.textPrimary }]}>{selectedReview.description}</Text>
+                    ) : (
+                      <Text style={[detailStyles.noDescription, { color: colors.textTertiary }]}>No written review</Text>
+                    )}
+
+                    {/* Photo */}
+                    {selectedReview.photoUrl && (
+                      <Image
+                        source={{ uri: selectedReview.photoUrl }}
+                        style={detailStyles.photo}
+                        contentFit="cover"
+                      />
+                    )}
+
+                    {/* Order Info */}
+                    <View style={[detailStyles.orderSection, { backgroundColor: colors.gray50, borderColor: colors.gray100 }]}>
+                      <View style={detailStyles.orderHeader}>
+                        <Ionicons name="receipt-outline" size={16} color={colors.textSecondary} />
+                        <Text style={[detailStyles.orderLabel, { color: colors.textSecondary }]}>Order #{selectedReview.orderNumber}</Text>
+                      </View>
+                      {selectedReview.items.map((item, idx) => (
+                        <Text key={idx} style={[detailStyles.orderItem, { color: colors.textPrimary }]}>
+                          {item.quantity}x {item.name}
+                        </Text>
+                      ))}
+                    </View>
+                  </>
+                );
+              })()}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -280,11 +360,102 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxxl * 2,
   },
   emptyTitle: { ...textStyles.h3, color: colors.textPrimary, marginTop: spacing.lg },
-  emptyText: { 
-    ...textStyles.body, 
-    color: colors.textSecondary, 
+  emptyText: {
+    ...textStyles.body,
+    color: colors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: spacing.xl,
     marginTop: spacing.sm,
+  },
+});
+
+const detailStyles = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  sheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+    paddingBottom: spacing.xl,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.gray300,
+    alignSelf: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  content: { padding: spacing.xl },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    ...textStyles.label,
+    fontSize: 18,
+  },
+  userInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  customerName: {
+    ...textStyles.h4,
+  },
+  username: {
+    ...textStyles.caption,
+    marginTop: 2,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  dateText: {
+    ...textStyles.caption,
+  },
+  description: {
+    ...textStyles.body,
+    lineHeight: 24,
+    marginBottom: spacing.lg,
+  },
+  noDescription: {
+    ...textStyles.body,
+    fontStyle: 'italic',
+    marginBottom: spacing.lg,
+  },
+  photo: {
+    width: '100%',
+    height: 220,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.lg,
+  },
+  orderSection: {
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  orderLabel: {
+    ...textStyles.label,
+  },
+  orderItem: {
+    ...textStyles.body,
+    paddingVertical: 2,
   },
 });

@@ -29,19 +29,19 @@ const OrderCard = ({ order, onReorder, colors }: { order: Order; onReorder: () =
   const STATUS_CONFIG = getStatusConfig(colors);
   const status = STATUS_CONFIG[order.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
   const isReady = order.status === 'ready';
-  const date = order.createdAt instanceof Date ? order.createdAt : 
+  const date = order.createdAt instanceof Date ? order.createdAt :
     (order.createdAt as any)?.toDate?.() || new Date();
   const canReorder = order.status === 'completed' || order.status === 'cancelled';
-  
+
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/order/${order.id}` as any);
   };
-  
+
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
-        styles.orderCard, 
+        styles.orderCard,
         { backgroundColor: colors.white, borderColor: colors.gray100 },
         isReady && { backgroundColor: colors.successLight, borderColor: colors.success, borderWidth: 2 }
       ]}
@@ -58,13 +58,13 @@ const OrderCard = ({ order, onReorder, colors }: { order: Order; onReorder: () =
           <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
         </View>
       </View>
-      
+
       <View style={[styles.orderItems, { borderTopColor: colors.gray100 }]}>
         <Text style={[styles.itemsText, { color: colors.textSecondary }]} numberOfLines={1}>
           {order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
         </Text>
       </View>
-      
+
       <View style={[styles.orderFooter, { borderTopColor: colors.gray100 }]}>
         <Text style={[styles.orderDate, { color: colors.textTertiary }]}>
           {date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -94,41 +94,73 @@ export default function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const prevStatusRef = useRef<Record<string, string>>({});
 
-  // Real-time listener for active orders only (minimizes reads)
+  // Real-time listener for active orders (with fallback for missing index)
   useEffect(() => {
     if (!user) {
       setLoading(false);
       return;
     }
 
-    const q = query(
-      collection(db, 'orders'),
-      where('customerId', '==', user.uid),
-      where('status', 'in', ['pending', 'confirmed', 'preparing', 'ready']),
-      orderBy('createdAt', 'desc')
-    );
+    let unsubscribe: (() => void) | null = null;
+    let usedFallback = false;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Order[];
-      
-      // Check for status changes to trigger haptic
-      orders.forEach(order => {
-        const prevStatus = prevStatusRef.current[order.id!];
-        if (prevStatus && prevStatus !== order.status) {
-          if (order.status === 'ready') {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          } else if (order.status === 'preparing') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const setupListener = () => {
+      const q = query(
+        collection(db, 'orders'),
+        where('customerId', '==', user.uid),
+        where('status', 'in', ['pending', 'confirmed', 'preparing', 'ready']),
+        orderBy('createdAt', 'desc')
+      );
+
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Order[];
+
+        // Check for status changes to trigger haptic
+        orders.forEach(order => {
+          const prevStatus = prevStatusRef.current[order.id!];
+          if (prevStatus && prevStatus !== order.status) {
+            if (order.status === 'ready') {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } else if (order.status === 'preparing') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
           }
-        }
-        prevStatusRef.current[order.id!] = order.status;
-      });
-      
-      setActiveOrders(orders);
-      setLoading(false);
-    });
+          prevStatusRef.current[order.id!] = order.status;
+        });
 
-    return () => unsubscribe();
+        setActiveOrders(orders);
+        setLoading(false);
+        // Re-fetch past orders when active orders change (handles active → completed transitions)
+        fetchPastOrders();
+      }, (error) => {
+        // Fallback: if composite index is missing, use simpler query
+        if (!usedFallback) {
+          usedFallback = true;
+          const fallbackQuery = query(
+            collection(db, 'orders'),
+            where('customerId', '==', user.uid),
+            where('status', 'in', ['pending', 'confirmed', 'preparing', 'ready'])
+          );
+          unsubscribe = onSnapshot(fallbackQuery, (snapshot) => {
+            let orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Order[];
+            orders.sort((a, b) => {
+              const dateA = a.createdAt instanceof Date ? a.createdAt : (a.createdAt as any)?.toDate?.() || new Date();
+              const dateB = b.createdAt instanceof Date ? b.createdAt : (b.createdAt as any)?.toDate?.() || new Date();
+              return dateB.getTime() - dateA.getTime();
+            });
+            setActiveOrders(orders);
+            setLoading(false);
+            fetchPastOrders();
+          });
+        }
+      });
+    };
+
+    setupListener();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [user]);
 
   // Fetch past orders only on mount and refresh (not real-time)
@@ -136,7 +168,7 @@ export default function OrdersScreen() {
     if (!user) return;
     const result = await getCustomerOrders(user.uid);
     if (result.success) {
-      const past = (result.data as Order[]).filter(o => 
+      const past = (result.data as Order[]).filter(o =>
         ['completed', 'cancelled'].includes(o.status)
       );
       setPastOrders(past);
@@ -189,8 +221,8 @@ export default function OrdersScreen() {
         <Text style={[styles.title, { color: colors.textPrimary }]}>My Orders</Text>
       </View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
       >
@@ -219,7 +251,7 @@ export default function OrdersScreen() {
                 ))}
               </View>
             )}
-            
+
             {pastOrders.length > 0 && (
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Past Orders</Text>

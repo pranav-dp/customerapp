@@ -11,22 +11,26 @@ import { Review } from '../services/reviews';
 interface ReviewCardProps {
   review: Review;
   onDelete?: () => void;
+  onPress?: () => void;
   showDeleteButton?: boolean;
   showRestaurantName?: boolean;
   key?: string;
 }
 
-export function ReviewCard({ review, onDelete, showDeleteButton = false, showRestaurantName = false }: ReviewCardProps) {
+export function ReviewCard({ review, onDelete, onPress, showDeleteButton = false, showRestaurantName = false }: ReviewCardProps) {
   const colors = useColors();
-  const date = review.createdAt instanceof Date 
-    ? review.createdAt 
+  const date = review.createdAt instanceof Date
+    ? review.createdAt
     : (review.createdAt as any)?.toDate?.() || new Date();
-  
+
   const timeAgo = getTimeAgo(date);
   const itemsSummary = review.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
 
+  const Container = onPress ? TouchableOpacity : View;
+  const containerProps = onPress ? { onPress, activeOpacity: 0.7 } : {};
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.white, shadowColor: colors.black }]}>
+    <Container {...containerProps} style={[styles.container, { backgroundColor: colors.white, shadowColor: colors.black }]}>
       {/* Restaurant Name Header - if showing */}
       {showRestaurantName && (
         <View style={[styles.restaurantHeader, { borderBottomColor: colors.gray100 }]}>
@@ -61,7 +65,7 @@ export function ReviewCard({ review, onDelete, showDeleteButton = false, showRes
 
       {/* Review Description */}
       {review.description ? (
-        <Text style={[styles.description, { color: colors.textPrimary }]}>{review.description}</Text>
+        <Text style={[styles.description, { color: colors.textPrimary }]} numberOfLines={onPress ? 2 : undefined}>{review.description}</Text>
       ) : (
         <View style={styles.noDescriptionContainer}>
           <StarRating rating={review.rating} size={18} readonly />
@@ -93,7 +97,7 @@ export function ReviewCard({ review, onDelete, showDeleteButton = false, showRes
           <Text style={[styles.deleteText, { color: colors.error }]}>Delete</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </Container>
   );
 }
 

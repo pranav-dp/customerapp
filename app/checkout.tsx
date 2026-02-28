@@ -158,6 +158,11 @@ export default function CheckoutScreen() {
       router.replace(`/order/${createdOrderId}`);
       setTimeout(() => clearCart(), 100);
 
+      // Update budget spending tracker
+      if (customer.id) {
+        addToSpent(customer.id, totalAmount).catch(() => { });
+      }
+
     } catch (error: any) {
       if (error.message === 'Payment cancelled') {
         Alert.alert('Payment Cancelled', 'Your order was not placed. Please try again.');
@@ -176,11 +181,11 @@ export default function CheckoutScreen() {
 
   const handleAssign = (friendId: string, friendName: string) => {
     if (!selectedItem) return;
-    
+
     const currentAssignments = selectedItem.assignments || [];
     const existing = currentAssignments.find(a => a.friendId === friendId);
     const totalAssigned = currentAssignments.reduce((sum, a) => sum + a.quantity, 0);
-    
+
     if (totalAssigned >= selectedItem.quantity && !existing) {
       Alert.alert('All assigned', 'All quantities are already assigned');
       return;
@@ -247,8 +252,8 @@ export default function CheckoutScreen() {
 
         {/* Split Bill Toggle */}
         {(customer?.friends?.length ?? 0) > 0 && (
-          <TouchableOpacity 
-            style={[styles.splitToggle, { backgroundColor: colors.white }]} 
+          <TouchableOpacity
+            style={[styles.splitToggle, { backgroundColor: colors.white }]}
             onPress={() => setSplitEnabled(!splitEnabled)}
           >
             <View style={styles.splitToggleLeft}>
@@ -279,9 +284,9 @@ export default function CheckoutScreen() {
                 <Text style={[styles.orderItemQty, { color: colors.textSecondary }]}>x{item.quantity}</Text>
                 <Text style={[styles.orderItemPrice, { color: colors.textPrimary }]}>{formatPrice(item.price * item.quantity)}</Text>
               </View>
-              
+
               {splitEnabled && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.assignButton, { backgroundColor: colors.gray50 }]}
                   onPress={() => openSplitModal(item.id)}
                 >
@@ -349,9 +354,9 @@ export default function CheckoutScreen() {
         {/* Budget Tracker */}
         {budget && budget.monthlyLimit > 0 && (
           <View style={styles.budgetSection}>
-            <BudgetTracker 
-              limit={budget.monthlyLimit} 
-              spent={budget.spent} 
+            <BudgetTracker
+              limit={budget.monthlyLimit}
+              spent={budget.spent}
               orderAmount={totalAmount}
               splitCount={splitCount}
             />
@@ -368,7 +373,7 @@ export default function CheckoutScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { backgroundColor: colors.white, borderTopColor: colors.gray100 }]}>
-        <Button 
+        <Button
           title={loading ? 'Placing Order...' : `Pay ${formatPrice(totalAmount)}`}
           onPress={handlePlaceOrder}
           disabled={loading}
@@ -396,7 +401,7 @@ export default function CheckoutScreen() {
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
               Quantity: {selectedItem?.quantity} • Tap to assign
             </Text>
-            
+
             <View style={styles.peopleList}>
               {allPeople.map(person => {
                 const count = selectedItem ? getAssignmentCount(selectedItem.id, person.id) : 0;
@@ -419,7 +424,7 @@ export default function CheckoutScreen() {
                 );
               })}
             </View>
-            
+
             <Button title="Done" onPress={() => setShowSplitModal(false)} fullWidth />
           </View>
         </View>

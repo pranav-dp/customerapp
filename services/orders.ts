@@ -130,7 +130,23 @@ export const getCustomerOrders = async (customerId: string) => {
     const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     return { success: true, data: orders };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    // Fallback: if composite index is missing, query without orderBy and sort in memory
+    try {
+      const fallbackQuery = query(
+        collection(db, 'orders'),
+        where('customerId', '==', customerId)
+      );
+      const snapshot = await getDocs(fallbackQuery);
+      let orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Order[];
+      orders.sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt : (a.createdAt as any)?.toDate?.() || new Date();
+        const dateB = b.createdAt instanceof Date ? b.createdAt : (b.createdAt as any)?.toDate?.() || new Date();
+        return dateB.getTime() - dateA.getTime();
+      });
+      return { success: true, data: orders };
+    } catch (fallbackError: any) {
+      return { success: false, error: fallbackError.message };
+    }
   }
 };
 
@@ -172,6 +188,23 @@ export const getCustomerOrdersByRestaurant = async (customerId: string, restaura
     const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     return { success: true, data: orders };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    // Fallback: query without orderBy and sort in memory
+    try {
+      const fallbackQuery = query(
+        collection(db, 'orders'),
+        where('customerId', '==', customerId),
+        where('restaurantId', '==', restaurantId)
+      );
+      const snapshot = await getDocs(fallbackQuery);
+      let orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Order[];
+      orders.sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt : (a.createdAt as any)?.toDate?.() || new Date();
+        const dateB = b.createdAt instanceof Date ? b.createdAt : (b.createdAt as any)?.toDate?.() || new Date();
+        return dateB.getTime() - dateA.getTime();
+      });
+      return { success: true, data: orders };
+    } catch (fallbackError: any) {
+      return { success: false, error: fallbackError.message };
+    }
   }
 };

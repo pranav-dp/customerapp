@@ -9,6 +9,7 @@ import { useColors } from '../hooks/useColors';
 import { useAuth } from '../contexts/AuthContext';
 import { TreatRoom, subscribeToTreatRoom, markTreatOrdered } from '../services/treatMode';
 import { createOrder, updateOrderPayment } from '../services/orders';
+import { addToSpent } from '../services/budget';
 import RazorpayService from '../services/razorpay';
 import { Button } from '../components/ui';
 
@@ -74,6 +75,11 @@ export default function TreatCheckoutScreen() {
       await updateOrderPayment(orderResult.id, paymentResponse.razorpay_payment_id);
       await markTreatOrdered(roomId!, orderResult.id);
 
+      // Update budget spending tracker
+      if (customer.id) {
+        addToSpent(customer.id, room.totalAmount).catch(() => { });
+      }
+
       router.replace(`/order/${orderResult.id}` as any);
     } catch (error: any) {
       Alert.alert('Payment Failed', error.message || 'Something went wrong');
@@ -127,7 +133,7 @@ export default function TreatCheckoutScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { backgroundColor: colors.white, borderTopColor: colors.gray100 }]}>
-        <Button 
+        <Button
           title={`Pay ₹${room.totalAmount}`}
           onPress={handlePay}
           loading={loading}
